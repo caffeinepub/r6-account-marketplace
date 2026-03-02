@@ -1,0 +1,62 @@
+{
+  "kind": "build_request",
+  "title": "Bootstrap admin: first caller auto-granted admin, subsequent grants require existing admin",
+  "projectName": "R6 Market",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-12",
+      "text": "Add a one-time admin bootstrap mechanism to the backend: if `adminPrincipal` has never been set (i.e., it holds a sentinel/anonymous value from initial deployment), the first authenticated caller of a new `claimAdmin` update function is automatically and permanently granted the `adminPrincipal` role. Subsequent calls to `claimAdmin` must be rejected once an admin is already set. All existing admin-only functions continue to require the caller to match the stored `adminPrincipal`.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "The first account to ever log in should be made admin - but none afterwards, unless defined by existing admin."
+        ]
+      },
+      "acceptanceCriteria": [
+        "On a fresh deployment with no admin set, calling `claimAdmin` with an authenticated (non-anonymous) principal stores that principal as `adminPrincipal` and returns a success result.",
+        "A second call to `claimAdmin` from any principal returns an error and does not change `adminPrincipal`.",
+        "After bootstrap, the existing `updateAdmin` function (callable only by the current admin) remains the sole way to transfer or change the admin principal.",
+        "All previously gated admin functions (add/update/delete listing, upload credential, hide/delete vouch, etc.) continue to enforce that the caller matches `adminPrincipal`.",
+        "Anonymous callers are rejected by `claimAdmin` and receive an error."
+      ]
+    },
+    {
+      "id": "REQ-13",
+      "text": "Expose a `claimAdmin` call from the frontend Admin Dashboard page: if the authenticated user is not currently admin and no admin has been set yet (backend returns a designated 'unclaimed' status), display a prominent 'Claim Admin' button. On click, call the `claimAdmin` backend function and refresh the admin status check. If an admin is already set and the current user is not that admin, continue showing the existing 'Access Denied' message.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "The first account to ever log in should be made admin - but none afterwards, unless defined by existing admin.",
+          "Please resolve so that I can test all functionality."
+        ]
+      },
+      "acceptanceCriteria": [
+        "When the backend `adminPrincipal` is unset/unclaimed, the Admin Dashboard shows a 'Claim Admin' button instead of 'Access Denied'.",
+        "Clicking 'Claim Admin' invokes the `claimAdmin` backend function and, on success, refreshes the page/admin status so the full dashboard is displayed.",
+        "If `claimAdmin` fails (admin already claimed by another principal), an error toast is shown and the 'Access Denied' message is rendered.",
+        "Once the current user is confirmed as admin, the full dashboard renders normally without requiring a page reload beyond the query invalidation."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not change existing admin-gated function signatures or access control checks — only add the bootstrap `claimAdmin` path.",
+    "The bootstrap claim must be a one-shot operation: once `adminPrincipal` is set via `claimAdmin`, the function must permanently reject further claims.",
+    "Anonymous principals must never be granted admin via any path."
+  ],
+  "nonGoals": [
+    "Multi-admin or role-based access control — a single adminPrincipal remains the model.",
+    "Resetting or revoking admin via `claimAdmin` — only the existing `updateAdmin` flow handles transfers.",
+    "Any changes to purchase, credential, or vouch logic unrelated to the admin bootstrap."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

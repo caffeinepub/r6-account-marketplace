@@ -1,0 +1,168 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 5,
+  "summary": "Production-grade, security-hardened ICP web marketplace for selling Rainbow Six Siege accounts. Replaces a Discord-based sales flow. Uses 4 canisters (Marketplace, Payment, Credential Vault, Vouch) with React+TypeScript frontend. Payments: ICP native + BTC/ETH via HTTPS outcalls to block explorers (Blockstream/Etherscan). Credential encryption: symmetric key in admin-controlled Credential Vault canister. Admin role: configurable principal updatable by current admin.",
+  "architectural_notes": [
+    "4-canister separation: Marketplace, Payment, Credential Vault, Vouch — each with distinct responsibilities and access control",
+    "All sensitive logic lives in canisters; frontend is never trusted for access control decisions",
+    "Deny-by-default access control: validate caller principal on every sensitive canister method",
+    "Credentials stored encrypted at rest (symmetric key in Credential Vault); decrypted in memory only after buyer principal verification",
+    "BTC/ETH payments: 'send to address' flow with tx hash submission, verified via HTTPS outcalls to Blockstream (BTC) and Etherscan (ETH)",
+    "Admin role: configurable principal stored in canister, updatable only by current admin via authenticated call",
+    "Internet Identity used for buyer and admin authentication; principal ID is the identity anchor — no real names or emails stored",
+    "Bootstrap admin: first caller to invoke claimAdmin (when adminPrincipal is unset) is permanently granted admin; all subsequent admin changes require authorisation from the current admin"
+  ],
+  "known_issues": [
+    "BTC/ETH HTTPS outcalls to external block explorers introduce an external dependency; confirmations may be delayed or fail if the explorer API is down",
+    "Admin bootstrap issue: initial deployment did not grant admin to first login — claimAdmin bootstrap logic being added to fix this"
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-build-the-public-facing-marketplace-page-with-a-a-hero-header-section-displaying-the-marketplace-brand-b-a-rank-filter-bar-allowing-buyers-to-filter-listings-by-rank-e-g-copper-bronze-silver-gold-platinum-diamond-champion-c-a-special-deals-section-at-the-top-showing-listings-with-specialdeal-true-visually-distinguished-d-a-listings-grid-showing-cards-for-each-account-each-card-displays-rank-price-special-deal-badge-if-applicable-and-availability-status-available-sold-e-sold-accounts-visually-dimmed-disabled-f-clicking-an-available-listing-opens-a-purchase-flow-modal-g-all-listing-data-fetched-from-the-marketplace-canister-public-queries",
+      "title": "Build the public-facing marketplace page with: (a) a hero/header section displaying the marketplace brand; (b) a rank filter bar allowing buyers to filter listings by rank (e.g., Copper, Bronze, Silver, Gold, Platinum, Diamond, Champion); (c) a Special Deals section at the top showing listings with specialDeal = true, visually distinguished; (d) a listings grid showing cards for each account — each card displays rank, price, special deal badge if applicable, and availability status (Available/Sold); (e) sold accounts visually dimmed/disabled; (f) clicking an available listing opens a purchase flow modal; (g) all listing data fetched from the Marketplace canister public queries.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-purchase-flow-modal-page-with-a-step-1-display-selected-account-metadata-rank-price-and-payment-method-selector-icp-btc-eth-b-step-2-for-icp-display-icp-payment-instructions-with-the-canister-s-receive-address-and-the-required-memo-then-a-verify-payment-button-that-calls-the-payment-canister-s-icp-verification-function-with-the-block-index-for-btc-display-a-btc-address-and-expected-amount-a-transaction-hash-input-field-and-a-verify-payment-button-that-calls-the-btc-https-outcall-verification-for-eth-display-an-eth-address-and-expected-amount-a-transaction-hash-input-field-and-a-verify-payment-button-that-calls-the-eth-https-outcall-verification-c-step-3-on-confirmed-payment-display-a-view-credentials-button-that-calls-getcredential-and-displays-the-decrypted-credential-in-a-secure-non-copy-paste-blocked-view-with-a-warning-that-the-buyer-should-change-credentials-immediately-d-after-credentials-are-shown-automatically-trigger-the-vouch-prompt-modal-e-require-internet-identity-login-before-initiating-any-purchase-step",
+      "title": "Build the purchase flow modal/page with: (a) step 1 — display selected account metadata (rank, price) and payment method selector (ICP, BTC, ETH); (b) step 2 — for ICP: display ICP payment instructions with the canister's receive address and the required memo, then a 'Verify Payment' button that calls the Payment canister's ICP verification function with the block index; for BTC: display a BTC address and expected amount, a transaction hash input field, and a 'Verify Payment' button that calls the BTC HTTPS outcall verification; for ETH: display an ETH address and expected amount, a transaction hash input field, and a 'Verify Payment' button that calls the ETH HTTPS outcall verification; (c) step 3 — on confirmed payment, display a 'View Credentials' button that calls getCredential and displays the decrypted credential in a secure, non-copy-paste-blocked view with a warning that the buyer should change credentials immediately; (d) after credentials are shown, automatically trigger the vouch prompt modal; (e) require Internet Identity login before initiating any purchase step.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-vouch-prompt-modal-that-a-appears-automatically-after-credentials-are-delivered-b-contains-fields-anonymous-username-text-required-rating-1-5-star-selector-required-review-text-textarea-optional-c-rank-is-pre-filled-from-the-purchased-account-d-on-submit-calls-the-vouch-canister-s-submitvouch-e-can-be-dismissed-skip-without-submitting-f-success-state-shows-a-confirmation-message",
+      "title": "Build the vouch prompt modal that: (a) appears automatically after credentials are delivered; (b) contains fields: anonymous username (text, required), rating (1–5 star selector, required), review text (textarea, optional); (c) rank is pre-filled from the purchased account; (d) on submit, calls the Vouch canister's submitVouch; (e) can be dismissed (skip) without submitting; (f) success state shows a confirmation message.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-public-vouches-reviews-page-displaying-a-all-non-hidden-vouches-from-getpublicvouches-b-each-vouch-shows-anonymous-username-rank-star-rating-review-text-and-timestamp-c-no-buyer-principal-or-purchase-id-is-displayed-d-overall-average-rating-displayed-at-the-top",
+      "title": "Build the public vouches/reviews page displaying: (a) all non-hidden vouches from getPublicVouches; (b) each vouch shows anonymous username, rank, star rating, review text, and timestamp; (c) no buyer principal or purchase ID is displayed; (d) overall average rating displayed at the top.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-the-admin-dashboard-accessible-only-to-authenticated-users-whose-principal-matches-adminprincipal-with-the-following-sections-a-listings-management-table-of-all-listings-with-columns-for-id-rank-price-specialdeal-toggle-status-and-actions-edit-price-toggle-special-deal-delete-add-new-listing-form-with-fields-rank-selector-price-specialdeal-toggle-encryptedcredentialref-admin-uploads-pre-encrypted-credential-blob-b-upload-credentials-form-to-upload-encrypted-credential-blob-for-a-given-accountid-c-purchases-read-only-table-of-all-purchase-records-purchaseid-accountid-paymentmethod-txhash-status-timestamp-d-vouch-moderation-table-of-all-vouches-including-hidden-ones-with-hide-unhide-and-delete-actions-e-admin-settings-field-to-update-the-adminprincipal-f-if-the-authenticated-user-s-principal-does-not-match-adminprincipal-show-an-access-denied-message-and-render-nothing-else",
+      "title": "Build the Admin Dashboard (accessible only to authenticated users whose principal matches adminPrincipal) with the following sections: (a) Listings Management — table of all listings with columns for id, rank, price, specialDeal toggle, status, and actions (edit price, toggle special deal, delete); add new listing form with fields: rank selector, price, specialDeal toggle, encryptedCredentialRef (admin uploads pre-encrypted credential blob); (b) Upload Credentials — form to upload encrypted credential blob for a given accountId; (c) Purchases — read-only table of all purchase records (purchaseId, accountId, paymentMethod, txHash, status, timestamp); (d) Vouch Moderation — table of all vouches including hidden ones, with hide/unhide and delete actions; (e) Admin Settings — field to update the adminPrincipal; (f) If the authenticated user's principal does not match adminPrincipal, show an 'Access Denied' message and render nothing else.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-dark-high-contrast-visual-theme-across-the-entire-frontend-consistent-with-a-premium-gaming-marketplace-aesthetic-deep-dark-backgrounds-near-black-vivid-accent-colors-inspired-by-rainbow-six-siege-s-military-tactical-visual-language-e-g-amber-gold-rank-accents-crimson-danger-indicators-clean-sans-serif-typography-card-based-listing-layout-with-sharp-borders-and-subtle-hover-animations-enforce-this-theme-consistently-across-all-pages-and-components",
+      "title": "Apply a dark, high-contrast visual theme across the entire frontend consistent with a premium gaming marketplace aesthetic: deep dark backgrounds (near-black), vivid accent colors inspired by Rainbow Six Siege's military/tactical visual language (e.g., amber/gold rank accents, crimson danger indicators), clean sans-serif typography, card-based listing layout with sharp borders, and subtle hover animations. Enforce this theme consistently across all pages and components.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-generate-and-use-a-custom-marketplace-logo-banner-image-a-dark-tactical-themed-banner-featuring-a-stylised-siege-shield-emblem-with-the-text-r6-market-in-a-bold-military-typeface-rendered-on-a-near-black-background-with-gold-and-red-accents-display-this-banner-in-the-site-header",
+      "title": "Generate and use a custom marketplace logo/banner image: a dark tactical-themed banner featuring a stylised siege/shield emblem with the text 'R6 Market' in a bold military typeface, rendered on a near-black background with gold and red accents. Display this banner in the site header.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-expose-a-claimadmin-call-from-the-frontend-admin-dashboard-page-if-the-authenticated-user-is-not-currently-admin-and-no-admin-has-been-set-yet-backend-returns-a-designated-unclaimed-status-display-a-prominent-claim-admin-button-on-click-call-the-claimadmin-backend-function-and-refresh-the-admin-status-check-if-an-admin-is-already-set-and-the-current-user-is-not-that-admin-continue-showing-the-existing-access-denied-message",
+      "title": "Expose a `claimAdmin` call from the frontend Admin Dashboard page: if the authenticated user is not currently admin and no admin has been set yet (backend returns a designated 'unclaimed' status), display a prominent 'Claim Admin' button. On click, call the `claimAdmin` backend function and refresh the admin status check. If an admin is already set and the current user is not that admin, continue showing the existing 'Access Denied' message.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Marketplace Canister: public account listings (rank, price, special deal flag, availability only), rank filtering, special deals section, admin-controlled pricing and toggling",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Payment Canister: ICP native ledger verification, BTC/ETH via HTTPS outcalls to Blockstream/Etherscan, purchase records, tx hash storage, credentials unlock only after on-chain confirmation",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Credential Vault Canister: encrypted credentials at rest with admin-controlled symmetric key, strict buyer-only principal validation, no public query access, decrypt in memory on verified retrieval",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Vouch Canister: purchase-verified review submission (one per purchase), anonymous username, rank, rating 1-5, text review, publicly visible, admin moderation (hide/delete)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "React+TypeScript frontend: Internet Identity auth, rank-filterable listings, Special Deals section, secure post-payment credential delivery view, vouch prompt after credential delivery",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Admin dashboard: add listings, upload encrypted credentials, set pricing, toggle special deals, view purchases, hide/delete vouches, update configurable admin principal",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Implement the Marketplace canister actor in backend/main.mo with the following data model and logic: (a) AccountListing record containing id, rank, price (in e8s for ICP, or USD-equivalent for BTC/ETH), specialDeal flag, status (Available/Sold), and an encryptedCredentialRef opaque blob reference — NO username, email, or password fields exposed; (b) stable storage for all listings; (c) public query to list all listings (returns only public metadata — rank, price, specialDeal, status, id); (d) public query to filter listings by rank; (e) public query to get a single listing by id (public metadata only); (f) admin-only update calls to: add a listing, update listing price, toggle specialDeal flag, mark a listing Sold, delete a listing; (g) a dedicated query for the Special Deals section returning only listings where specialDeal is true; (h) all admin calls must validate caller principal against a stored adminPrincipal and trap/return error if not authorised; (i) updateAdmin call that allows the current admin to set a new adminPrincipal.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Implement the Payment canister logic (as a separate actor class or namespace within backend/main.mo, or as a second actor file if the build system supports it — otherwise as a clearly separated module within main.mo) with: (a) PurchaseRecord stable storage containing purchaseId, buyerPrincipal, accountId, paymentMethod (ICP/BTC/ETH), txHash, timestamp, status (Pending/Confirmed/Failed); (b) ICP payment verification: accept a block index / memo, call the ICP ledger canister (ryjl3-tyaaa-aaaaa-aaaba-cai) via inter-canister call to verify the transfer amount, recipient, and memo match the expected values for the listing price, then atomically mark the account Sold and create a Confirmed purchase record; (c) BTC payment verification: accept a txHash, call Blockstream API (https://blockstream.info/api/tx/{txid}) via HTTPS outcall, parse the response to confirm the output address and value match the expected BTC address and amount, store the txHash permanently, mark purchase Confirmed only after confirmation; (d) ETH payment verification: accept a txHash, call Etherscan API (https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash={txhash}) via HTTPS outcall, parse response to confirm to-address and value match expected ETH address and amount, store txHash permanently, mark purchase Confirmed only after on-chain confirmation; (e) getPurchaseByBuyer query that returns purchase records ONLY if caller principal matches buyerPrincipal; (f) hasPurchased query returning Bool — true only if caller principal has a Confirmed purchase for the given accountId; (g) all sensitive queries validate caller principal explicitly.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Implement the Credential Vault logic within backend/main.mo with: (a) stable storage mapping accountId → encryptedCredentialBlob (encrypted by admin using a symmetric key before upload); (b) uploadCredential admin-only update call that stores an encrypted blob for a given accountId — validates caller is admin; (c) getCredential update call (must be update, not query, to enforce access control on-chain) that: validates caller is authenticated (non-anonymous principal), calls hasPurchased on the Payment module to confirm the caller has a Confirmed purchase for the requested accountId, and only then returns the encrypted blob; (d) the symmetric decryption key is stored separately and retrievable only by admin via an admin-authenticated getDecryptionKey call — the key is never returned to buyers; (e) credentials cannot be enumerated — no public list of credential refs; (f) rate-limit credential retrievals to a maximum of 5 views per purchaseId to prevent bulk exfiltration; (g) all access control checks performed inside the canister — frontend confirmation is never sufficient.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Implement the Vouch canister logic within backend/main.mo with: (a) Vouch record containing vouchId, purchaseId, buyerPrincipal, anonymousUsername, rank, rating (Nat 1–5), reviewText, timestamp, hidden (Bool, default false); (b) submitVouch update call that: validates caller is authenticated, validates caller has a Confirmed purchase for the given purchaseId, enforces one vouch per purchaseId (returns error if vouch already exists for that purchaseId), stores the vouch; (c) getPublicVouches query returning all vouches where hidden = false — returns anonymousUsername, rank, rating, reviewText, timestamp but NOT buyerPrincipal or purchaseId; (d) admin-only hideVouch and deleteVouch update calls that validate admin principal; (e) getMyVouches query returning vouches where caller principal matches buyerPrincipal.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Add a one-time admin bootstrap mechanism to the backend: if `adminPrincipal` has never been set (i.e., it holds a sentinel/anonymous value from initial deployment), the first authenticated caller of a new `claimAdmin` update function is automatically and permanently granted the `adminPrincipal` role. Subsequent calls to `claimAdmin` must be rejected once an admin is already set. All existing admin-only functions continue to require the caller to match the stored `adminPrincipal`.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "R6 Account Marketplace",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

@@ -1,0 +1,29 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Bootstrap admin: first caller auto-granted admin, subsequent grants require existing admin",
+  "requirements": [
+    {
+      "id": "REQ-13",
+      "summary": "Add 'Claim Admin' button to Admin Dashboard when no admin is set, allowing the first authenticated user to claim the admin role via the claimAdmin backend function.",
+      "acceptanceCriteria": [
+        "When the backend `adminPrincipal` is unset/unclaimed, the Admin Dashboard shows a 'Claim Admin' button instead of 'Access Denied'.",
+        "Clicking 'Claim Admin' invokes the `claimAdmin` backend function and, on success, refreshes the page/admin status so the full dashboard is displayed.",
+        "If `claimAdmin` fails (admin already claimed by another principal), an error toast is shown and the 'Access Denied' message is rendered.",
+        "Once the current user is confirmed as admin, the full dashboard renders normally without requiring a page reload beyond the query invalidation."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a useClaimAdmin mutation hook that calls the backend claimAdmin function and returns the result (success or alreadyClaimed). The mutation should invalidate the 'isCallerAdmin' query on success to trigger an immediate admin status refresh."
+        },
+        {
+          "path": "frontend/src/pages/AdminDashboard.tsx",
+          "operation": "modify",
+          "description": "Modify the access control logic to check if admin is unclaimed by calling claimAdmin when access is denied. If the backend returns 'alreadyClaimed', show the existing 'Access Denied' message. If admin is unclaimed (detected by attempting a safe query or inferred from isCallerAdmin returning false on a fresh deployment), display a prominent 'Claim Admin' button. On button click, invoke the useClaimAdmin mutation, show a loading state, and on success invalidate the admin status query to render the full dashboard. On failure (alreadyClaimed), display an error toast and the 'Access Denied' message. Ensure the flow does not require a manual page reload."
+        }
+      ]
+    }
+  ]
+}

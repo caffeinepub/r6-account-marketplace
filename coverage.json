@@ -1,0 +1,54 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-03-02T01:07:10.648Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 2,
+    "implemented": 1,
+    "items": [
+      {
+        "id": "REQ-12",
+        "summary": "Add a one-time admin bootstrap mechanism to the backend: if `adminPrincipal` has never been set (i.e., it holds a sentinel/anonymous value from initial deployment), the first authenticated caller of a new `claimAdmin` update function is automatically and permanently granted the `adminPrincipal` role. Subsequent calls to `claimAdmin` must be rejected once an admin is already set. All existing admin-only functions continue to require the caller to match the stored `adminPrincipal`.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-13",
+        "summary": "Expose a `claimAdmin` call from the frontend Admin Dashboard page: if the authenticated user is not currently admin and no admin has been set yet (backend returns a designated 'unclaimed' status), display a prominent 'Claim Admin' button. On click, call the `claimAdmin` backend function and refresh the admin status check. If an admin is already set and the current user is not that admin, continue showing the existing 'Access Denied' message.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/AdminDashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/AdminDashboard.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "build-request.json",
+    "build-template/README.md",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/AdminDashboard.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "frontend/src/hooks/useQueries.ts": "All React Query hooks for backend operations, now including a `useClaimAdmin` mutation that calls the backend `claimAdmin` function and invalidates the `isCallerAdmin` query on a successful claim.",
+  "frontend/src/components/marketplace/ListingCard.tsx": "Listing card component displaying rank, price, special deal badge, and availability — fixed to use `Status.sold` enum comparison instead of `.__kind__`.",
+  "frontend/src/pages/MarketplacePage.tsx": "Main marketplace page with hero banner, stats bar, special deals section, rank filter, and listings grid — fixed to use `Status.available` enum comparison.",
+  "frontend/src/components/purchase/CredentialView.tsx": "Secure credential display component — fixed to use `__kind__` (double underscore) for discriminated union checks on `getCredential` result.",
+  "frontend/src/components/admin/ListingsManagement.tsx": "Admin listings management table with add/edit/delete/toggle actions — fixed to use `Status.sold` enum comparison instead of `.__kind__`.",
+  "frontend/src/components/admin/CredentialUpload.tsx": "Admin credential upload form for storing account credentials and setting the symmetric decryption key.",
+  "frontend/src/components/admin/PurchasesView.tsx": "Read-only admin view of all purchase records with status badges and payment method display.",
+  "frontend/src/components/admin/VouchModeration.tsx": "Admin vouch moderation table with hide/unhide and delete actions for all reviews.",
+  "frontend/src/components/admin/AdminSettings.tsx": "Admin settings panel for assigning admin role to a new principal via Internet Identity.",
+  "frontend/src/pages/AdminDashboard.tsx": "Admin dashboard page with three-state access control: unauthenticated (login prompt), authenticated-not-admin (Claim Admin button that calls `claimAdmin`, showing access denied if already claimed), and authenticated-admin (full tabbed dashboard)."
+}

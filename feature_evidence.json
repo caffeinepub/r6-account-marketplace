@@ -1,0 +1,26 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-expose-a-claimadmin-call-from-the-frontend-admin-dashboard-page-if-the-authenticated-user-is-not-currently-admin-and-no-admin-has-been-set-yet-backend-returns-a-designated-unclaimed-status-display-a-prominent-claim-admin-button-on-click-call-the-claimadmin-backend-function-and-refresh-the-admin-status-check-if-an-admin-is-already-set-and-the-current-user-is-not-that-admin-continue-showing-the-existing-access-denied-message",
+      "featureTitle": "Expose a `claimAdmin` call from the frontend Admin Dashboard page: if the authenticated user is not currently admin and no admin has been set yet (backend returns a designated 'unclaimed' status), display a prominent 'Claim Admin' button. On click, call the `claimAdmin` backend function and refresh the admin status check. If an admin is already set and the current user is not that admin, continue showing the existing 'Access Denied' message.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/AdminDashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "http-outcalls@3.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-13"
+      ],
+      "confidence": "high"
+    }
+  ]
+}
