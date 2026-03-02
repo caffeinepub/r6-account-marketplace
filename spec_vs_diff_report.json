@@ -1,58 +1,53 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-03-02T01:07:10.645Z",
-  "summary": "The diff implements both REQ-12 (backend claimAdmin bootstrap) and REQ-13 (frontend Claim Admin button on Admin Dashboard). The backend adds a migration module initializing adminPrincipal as null, and main.mo includes the adminPrincipal state variable. The frontend AdminDashboard exposes a Claim Admin button with proper flow, and useQueries.ts includes a useClaimAdmin mutation. However, the backend claimAdmin function implementation itself is truncated and cannot be fully verified, particularly the anonymous principal rejection, the one-shot enforcement, and continued enforcement of existing admin-gated functions. The frontend logic appears largely complete based on the summary and visible code.",
+  "generatedAt": "2026-03-02T01:26:44.903Z",
+  "summary": "The diff implements all six requirements (REQ-14 through REQ-20) with good coverage. Most acceptance criteria are met. A few minor gaps exist: the banner image rename is referenced in code but the actual image file addition is not evidenced; and the REQ-20 post-claim query invalidation is not clearly evidenced. The SpecialDealsSection refactor addresses REQ-17 by moving data fetching to the parent. Overall the implementation is largely complete.",
   "missing_requirements": [
     {
-      "id": "REQ-12",
-      "requirement": "Anonymous callers are rejected by claimAdmin and receive an error.",
-      "reason": "The backend main.mo diff is truncated and the actual claimAdmin function body is not visible. There is no evidence in the visible diff that an anonymous principal check is performed in claimAdmin.",
+      "requirement": "Replace the banner image file from marketplace-banner.dim_1200x300.png to ascensions-market-banner.dim_1200x300.png as part of REQ-19 branding rename",
+      "reason": "The frontend code references /assets/generated/ascensions-market-banner.dim_1200x300.png in MarketplacePage.tsx, but no new image file is listed in the added or modified files. The image file rename/addition is not evidenced in the diff.",
       "evidence": [
-        "backend/main.mo"
+        "frontend/src/pages/MarketplacePage.tsx"
       ]
     },
     {
-      "id": "REQ-12",
-      "requirement": "A second call to claimAdmin from any principal returns an error and does not change adminPrincipal (one-shot enforcement).",
-      "reason": "The backend main.mo diff is truncated; the claimAdmin function implementation is not visible to confirm one-shot rejection logic is present.",
-      "evidence": [
-        "backend/main.mo"
-      ]
-    },
-    {
-      "id": "REQ-13",
-      "requirement": "When the backend adminPrincipal is unset/unclaimed, the Admin Dashboard shows a 'Claim Admin' button instead of 'Access Denied' — specifically conditioned on the backend returning a designated 'unclaimed' status.",
-      "reason": "The visible AdminDashboard code shows the Claim Admin button when isAdmin is false and claimDenied is false, but there is no evidence of a distinct 'unclaimed' status returned from the backend being checked. The button is shown for all non-admin authenticated users, not only when the backend signals 'unclaimed'.",
-      "evidence": [
-        "frontend/src/pages/AdminDashboard.tsx",
-        "frontend/src/hooks/useQueries.ts"
-      ]
-    }
-  ],
-  "hallucinated_features": [
-    {
-      "description": "A migration module (backend/migration.mo) was added to handle state migration from an old actor shape to a new shape including adminPrincipal.",
-      "reason": "The build request does not mention any migration module or data migration concern — it only requires adding a claimAdmin bootstrap mechanism. Adding a full migration.mo with OldActor/NewActor type definitions goes beyond what was requested.",
-      "evidence": [
-        "backend/migration.mo"
-      ]
-    },
-    {
-      "description": "The AdminDashboard imports and uses a Variant_success_alreadyClaimed constant from the backend to discriminate the claimAdmin result.",
-      "reason": "The build request does not specify the shape of the claimAdmin return type or that it uses a named variant with 'alreadyClaimed'. This specific discriminated union design is an implementation detail not described in the requirements.",
+      "id": "REQ-20",
+      "requirement": "After successful claimAdmin, the dashboard loads admin sections immediately",
+      "reason": "AdminDashboard uses a local claimSuccess state flag but there is no evidence of queryClient.invalidateQueries being called on the isAdmin or isAdminClaimed queries after a successful claim, so the backend-verified isAdmin state may not refresh immediately.",
       "evidence": [
         "frontend/src/pages/AdminDashboard.tsx"
       ]
     }
   ],
-  "confidence": 0.55,
+  "hallucinated_features": [
+    {
+      "description": "A formal migration.mo module was added implementing OldActor/NewActor type definitions and a run function for canister upgrade data migration",
+      "reason": "The build request only asked to extend the AccountListing data model and update relevant calls. A dedicated Motoko migration module with typed old/new actor state was not requested, though it is a reasonable ICP implementation pattern.",
+      "evidence": [
+        "backend/migration.mo",
+        "backend/main.mo"
+      ]
+    }
+  ],
+  "confidence": 0.78,
   "changed_files": [
     "backend/main.mo",
     "backend/migration.mo",
     "frontend-file-summaries.txt",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/components/admin/ListingsManagement.tsx",
+    "frontend/src/components/admin/PurchasesView.tsx",
+    "frontend/src/components/layout/Footer.tsx",
+    "frontend/src/components/layout/Header.tsx",
+    "frontend/src/components/layout/Layout.tsx",
+    "frontend/src/components/marketplace/ListingCard.tsx",
+    "frontend/src/components/marketplace/RankFilter.tsx",
+    "frontend/src/components/marketplace/SpecialDealsSection.tsx",
     "frontend/src/hooks/useQueries.ts",
     "frontend/src/pages/AdminDashboard.tsx",
+    "frontend/src/pages/MarketplacePage.tsx",
     "project_state.json"
   ]
 }

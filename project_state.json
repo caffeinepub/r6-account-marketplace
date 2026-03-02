@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 5,
-  "summary": "Production-grade, security-hardened ICP web marketplace for selling Rainbow Six Siege accounts. Replaces a Discord-based sales flow. Uses 4 canisters (Marketplace, Payment, Credential Vault, Vouch) with React+TypeScript frontend. Payments: ICP native + BTC/ETH via HTTPS outcalls to block explorers (Blockstream/Etherscan). Credential encryption: symmetric key in admin-controlled Credential Vault canister. Admin role: configurable principal updatable by current admin.",
+  "projectStateVersion": 7,
+  "summary": "Production-grade, security-hardened ICP web marketplace for selling Rainbow Six Siege accounts, branded as 'Ascension's Market'. Replaces a Discord-based sales flow. Uses 4 canisters (Marketplace, Payment, Credential Vault, Vouch) with React+TypeScript frontend. Payments: ICP native + BTC/ETH via HTTPS outcalls to block explorers (Blockstream/Etherscan). Credential encryption: symmetric key in admin-controlled Credential Vault canister. Admin role: configurable principal updatable by current admin; first-login claimAdmin bootstrap supported.",
   "architectural_notes": [
     "4-canister separation: Marketplace, Payment, Credential Vault, Vouch — each with distinct responsibilities and access control",
     "All sensitive logic lives in canisters; frontend is never trusted for access control decisions",
@@ -14,9 +14,11 @@
   ],
   "known_issues": [
     "BTC/ETH HTTPS outcalls to external block explorers introduce an external dependency; confirmations may be delayed or fail if the explorer API is down",
-    "Admin bootstrap issue: initial deployment did not grant admin to first login — claimAdmin bootstrap logic being added to fix this"
+    "Admin bootstrap issue: initial deployment did not grant admin to first login — claimAdmin bootstrap logic being added to fix this",
+    "Special Deals section/tab not appearing on marketplace page — under active investigation and fix"
   ],
   "isFixRequest": true,
+  "imageRequirements": "## Edit Images\n- Replace the text R6 Market with Ascensions Market in the same bold military typeface keeping the dark near-black background with gold and red accents and the siege/shield emblem (marketplace-banner.dim_1200x300.png > ascensions-market-banner.dim_1200x300.png)",
   "existing_features": [
     {
       "id": "feature-build-the-public-facing-marketplace-page-with-a-a-hero-header-section-displaying-the-marketplace-brand-b-a-rank-filter-bar-allowing-buyers-to-filter-listings-by-rank-e-g-copper-bronze-silver-gold-platinum-diamond-champion-c-a-special-deals-section-at-the-top-showing-listings-with-specialdeal-true-visually-distinguished-d-a-listings-grid-showing-cards-for-each-account-each-card-displays-rank-price-special-deal-badge-if-applicable-and-availability-status-available-sold-e-sold-accounts-visually-dimmed-disabled-f-clicking-an-available-listing-opens-a-purchase-flow-modal-g-all-listing-data-fetched-from-the-marketplace-canister-public-queries",
@@ -79,6 +81,54 @@
       "title": "Expose a `claimAdmin` call from the frontend Admin Dashboard page: if the authenticated user is not currently admin and no admin has been set yet (backend returns a designated 'unclaimed' status), display a prominent 'Claim Admin' button. On click, call the `claimAdmin` backend function and refresh the admin status check. If an admin is already set and the current user is not that admin, continue showing the existing 'Access Denied' message.",
       "reqIds": [
         "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-rare-skins-filter-button-to-the-marketplace-rank-filter-bar-placed-alongside-the-existing-unranked-filter-button-when-rare-skins-is-active-the-listings-grid-filters-to-show-only-listings-that-have-at-least-one-tagged-skin-name-on-each-listing-card-if-rareskinnames-is-non-empty-display-the-skin-names-as-small-badge-chip-tags-beneath-the-rank-if-empty-omit-the-skins-section-entirely-from-the-card-if-rareskinshowcaselink-is-set-display-a-small-view-skins-link-on-the-card-that-opens-the-url-in-a-new-tab",
+      "title": "Add a Rare Skins filter button to the marketplace rank filter bar, placed alongside the existing Unranked filter button. When Rare Skins is active, the listings grid filters to show only listings that have at least one tagged skin name. On each listing card, if rareSkinNames is non-empty, display the skin names as small badge chip tags beneath the rank; if empty, omit the skins section entirely from the card. If rareSkinShowcaseLink is set, display a small View Skins link on the card that opens the URL in a new tab.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-admin-dashboard-listings-management-section-add-a-rare-skins-sub-panel-for-each-listing-it-must-include-1-a-structured-tag-input-field-where-the-admin-can-type-a-skin-name-press-enter-to-append-it-as-a-visible-tag-chip-and-repeat-chips-can-be-individually-removed-2-a-text-input-for-an-optional-external-showcase-link-url-3-a-save-button-that-calls-the-backend-updatelisting-mutation-with-the-updated-rareskinnames-array-and-rareskinshowcaselink-the-tag-input-must-be-available-both-when-adding-a-new-listing-and-when-editing-an-existing-one",
+      "title": "In the Admin Dashboard Listings Management section, add a Rare Skins sub-panel for each listing. It must include: (1) a structured tag input field where the admin can type a skin name, press Enter to append it as a visible tag chip, and repeat; chips can be individually removed; (2) a text input for an optional external showcase link URL; (3) a Save button that calls the backend updateListing mutation with the updated rareSkinNames array and rareSkinShowcaseLink. The tag input must be available both when adding a new listing and when editing an existing one.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-investigate-and-fix-why-the-special-deals-section-is-not-appearing-on-the-marketplace-page-audit-the-specialdealssection-component-the-usegetspecialdeals-query-hook-the-backend-getspecialdeals-query-and-the-rendering-logic-in-marketplacepage-tsx-ensure-the-section-renders-whenever-at-least-one-listing-has-specialdeal-true-including-the-correct-query-key-stale-time-and-conditional-rendering-guard-fix-any-bugs-found-in-data-fetching-response-mapping-or-conditional-display",
+      "title": "Investigate and fix why the Special Deals section is not appearing on the marketplace page. Audit the SpecialDealsSection component, the useGetSpecialDeals query hook, the backend getSpecialDeals query, and the rendering logic in MarketplacePage.tsx. Ensure the section renders whenever at least one listing has specialDeal = true, including the correct query key, stale time, and conditional rendering guard. Fix any bugs found in data fetching, response mapping, or conditional display.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-all-built-with-caffeine-ai-branding-text-links-and-attribution-from-the-entire-frontend-codebase-this-includes-the-footer-component-any-inline-html-and-any-other-component-or-page-that-references-caffeine-ai-or-built-with-do-not-replace-it-with-any-other-attribution",
+      "title": "Remove all Built with caffeine.ai branding text, links, and attribution from the entire frontend codebase. This includes the Footer component, any inline HTML, and any other component or page that references caffeine.ai or Built with. Do not replace it with any other attribution.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-rename-the-marketplace-from-r6-market-to-ascension-s-market-across-the-entire-frontend-update-all-occurrences-in-page-titles-header-component-branding-text-footer-brand-name-hero-section-heading-on-marketplacepage-the-logo-banner-image-alt-text-and-any-rendered-text-overlay-admin-dashboard-page-title-and-any-other-string-literal-or-constant-referencing-r6-market",
+      "title": "Rename the marketplace from R6 Market to Ascension's Market across the entire frontend. Update all occurrences in: page titles, Header component branding text, Footer brand name, hero section heading on MarketplacePage, the logo/banner image alt text and any rendered text overlay, Admin Dashboard page title, and any other string literal or constant referencing R6 Market.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-backend-claimadmin-function-so-that-1-if-adminprincipal-is-still-the-sentinel-unclaimed-value-the-first-authenticated-non-anonymous-caller-is-permanently-granted-adminprincipal-2-once-an-admin-is-set-any-further-claimadmin-call-from-a-non-admin-caller-is-rejected-with-an-error-3-an-anonymous-principal-can-never-claim-admin-update-the-frontend-admin-dashboard-so-the-claim-admin-button-is-shown-only-when-no-admin-is-yet-set-and-subsequent-non-admin-attempts-show-the-access-denied-state",
+      "title": "Update the backend claimAdmin function so that: (1) if adminPrincipal is still the sentinel unclaimed value, the first authenticated non-anonymous caller is permanently granted adminPrincipal; (2) once an admin is set, any further claimAdmin call from a non-admin caller is rejected with an error; (3) an anonymous principal can never claim admin. Update the frontend Admin Dashboard so the Claim Admin button is shown only when no admin is yet set, and subsequent non-admin attempts show the Access Denied state.",
+      "reqIds": [
+        "REQ-20"
       ],
       "version": 1
     }
@@ -159,10 +209,36 @@
         "REQ-12"
       ],
       "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Rare Skins section: placed alongside Unranked filter on marketplace page; admin can add external showcase link and tag individual skin names to a listing (structured tag input); skin names display on listing card, omitted if none tagged.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Fix Special Deals section/tab not appearing on the marketplace page.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Remove all 'Built with caffeine.ai' branding tags from the frontend.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Extend the backend AccountListing data model to include two new optional fields: (1) rareSkinNames — a list of text strings representing tagged skin names; (2) rareSkinShowcaseLink — an optional external URL string for a showcase link. Update all relevant admin update calls (addListing, updateListing) to accept and persist these new fields. Public listing queries must return these fields so the frontend can render them.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "status": "pending"
     }
   ],
   "gameProjectType": "none",
-  "projectName": "R6 Account Marketplace",
+  "projectName": "Ascension's Market",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

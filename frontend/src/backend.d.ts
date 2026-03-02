@@ -27,7 +27,9 @@ export interface PublicListing {
     id: string;
     status: Status;
     rank: string;
+    rareSkinShowcaseLink?: string;
     specialDeal: boolean;
+    rareSkinNames?: Array<string>;
     priceE8s: bigint;
 }
 export interface Vouch {
@@ -75,7 +77,7 @@ export enum Variant_success_alreadyClaimed {
     alreadyClaimed = "alreadyClaimed"
 }
 export interface backendInterface {
-    addListing(id: string, rank: string, priceE8s: bigint, specialDeal: boolean, encryptedCredentialRef: Uint8Array): Promise<void>;
+    addListing(id: string, rank: string, priceE8s: bigint, specialDeal: boolean, encryptedCredentialRef: Uint8Array, rareSkinNames: Array<string> | null, rareSkinShowcaseLink: string | null): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     claimAdmin(): Promise<Variant_success_alreadyClaimed>;
     deleteListing(id: string): Promise<void>;
@@ -114,6 +116,7 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     hasPurchased(accountId: string): Promise<boolean>;
     hideVouch(vouchId: string): Promise<void>;
+    isAdminClaimed(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     listAllListings(): Promise<Array<PublicListing>>;
     markSold(id: string): Promise<void>;
@@ -121,6 +124,7 @@ export interface backendInterface {
     setDecryptionKey(key: Uint8Array): Promise<void>;
     submitVouch(purchaseId: string, anonymousUsername: string, rank: string, rating: bigint, reviewText: string): Promise<Variant_notAuthenticated_notPurchased_alreadyVouched_success_invalidRating>;
     toggleSpecialDeal(id: string): Promise<void>;
+    updateListing(id: string, priceE8s: bigint, rank: string, rareSkinNames: Array<string> | null, rareSkinShowcaseLink: string | null): Promise<void>;
     updateListingPrice(id: string, priceE8s: bigint): Promise<void>;
     uploadCredential(accountId: string, encryptedBlob: Uint8Array): Promise<void>;
     verifyBtcPayment(purchaseId: string, accountId: string, txHash: string): Promise<void>;

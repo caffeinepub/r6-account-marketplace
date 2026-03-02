@@ -19,22 +19,23 @@ import { useQueryClient } from '@tanstack/react-query';
 
 // Root layout component
 function RootLayout() {
-  const { identity, clear } = useInternetIdentity();
-  const queryClient = useQueryClient();
+  const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
+  const navigate = useNavigate();
 
   const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
 
   const showProfileSetup =
     isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
-  const handleLogout = async () => {
-    await clear();
-    queryClient.clear();
+  const handleNavigate = (page: 'marketplace' | 'admin' | 'vouches') => {
+    if (page === 'marketplace') navigate({ to: '/' });
+    else if (page === 'admin') navigate({ to: '/admin' });
+    else if (page === 'vouches') navigate({ to: '/vouches' });
   };
 
   return (
-    <Layout onLogout={handleLogout}>
+    <Layout onNavigate={handleNavigate}>
       <Outlet />
       {showProfileSetup && <ProfileSetupModal />}
       <Toaster theme="dark" position="bottom-right" />

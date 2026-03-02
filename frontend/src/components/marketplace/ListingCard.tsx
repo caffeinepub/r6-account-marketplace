@@ -1,98 +1,133 @@
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ShoppingCart, Lock, Star } from 'lucide-react';
-import { formatICP, RANK_COLORS, RANK_ICONS } from '../../lib/utils';
-import { Status } from '../../backend';
+import React, { useState } from 'react';
 import type { PublicListing } from '../../backend';
+import { Status } from '../../backend';
+import { Badge } from '../ui/badge';
+import { ExternalLink, Sparkles, Tag } from 'lucide-react';
+import PurchaseFlowModal from '../purchase/PurchaseFlowModal';
 
 interface ListingCardProps {
   listing: PublicListing;
-  onSelect: () => void;
-  featured?: boolean;
 }
 
-export default function ListingCard({ listing, onSelect, featured = false }: ListingCardProps) {
+const RANK_COLORS: Record<string, string> = {
+  Copper: 'text-orange-700',
+  Bronze: 'text-orange-500',
+  Silver: 'text-slate-400',
+  Gold: 'text-yellow-400',
+  Platinum: 'text-cyan-400',
+  Emerald: 'text-emerald-400',
+  Diamond: 'text-blue-400',
+  Champion: 'text-purple-400',
+  Unranked: 'text-muted-foreground',
+};
+
+function formatPrice(priceE8s: bigint): string {
+  const icp = Number(priceE8s) / 1e8;
+  return icp.toFixed(2);
+}
+
+export default function ListingCard({ listing }: ListingCardProps) {
+  const [showPurchase, setShowPurchase] = useState(false);
   const isSold = listing.status === Status.sold;
-  const rankColor = RANK_COLORS[listing.rank] || RANK_COLORS['Unranked'];
-  const rankIcon = RANK_ICONS[listing.rank] || '⚔️';
+  const rankColor = RANK_COLORS[listing.rank] || 'text-foreground';
+
+  const hasSkins = listing.rareSkinNames && listing.rareSkinNames.length > 0;
 
   return (
-    <div
-      className={`relative group rounded-sm border transition-all duration-200 overflow-hidden ${
-        isSold
-          ? 'opacity-50 cursor-not-allowed border-border bg-surface'
-          : featured
-          ? 'border-gold/50 bg-surface hover:border-gold hover:shadow-gold cursor-pointer'
-          : 'border-border bg-surface hover:border-gold/40 hover:bg-surface-raised cursor-pointer'
-      }`}
-      onClick={!isSold ? onSelect : undefined}
-    >
-      {/* Top accent line */}
-      {!isSold && (
-        <div
-          className={`h-0.5 w-full ${
-            featured ? 'bg-gold' : 'bg-gold/30 group-hover:bg-gold/60'
-          } transition-all`}
-        />
-      )}
-
-      <div className="p-4 space-y-3">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-2">
-          <div
-            className={`flex items-center gap-2 px-2.5 py-1 rounded-sm border text-sm font-semibold ${rankColor}`}
-          >
-            <span>{rankIcon}</span>
-            <span>{listing.rank}</span>
+    <>
+      <div
+        className={`relative bg-card border rounded-xl overflow-hidden transition-all duration-200 flex flex-col ${
+          isSold
+            ? 'opacity-60 border-border'
+            : 'border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5'
+        }`}
+      >
+        {/* Special Deal Badge */}
+        {listing.specialDeal && (
+          <div className="absolute top-2 right-2 z-10">
+            <Badge variant="default" className="bg-amber-500 text-white text-xs px-2 py-0.5">
+              Special Deal
+            </Badge>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            {listing.specialDeal && (
-              <Badge className="bg-gold/20 text-gold border-gold/40 text-xs px-2 py-0.5 font-semibold">
-                <Star className="w-2.5 h-2.5 mr-1 fill-gold" />
-                DEAL
-              </Badge>
-            )}
-            {isSold && (
-              <Badge
-                variant="secondary"
-                className="text-xs bg-surface-overlay text-muted-foreground border-border"
-              >
-                SOLD
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Price */}
-        <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Price</p>
-          <p className="font-display text-2xl font-bold text-gold">{formatICP(listing.priceE8s)}</p>
-        </div>
-
-        {/* Account ID (truncated, non-sensitive) */}
-        <p className="text-xs text-muted-foreground font-mono truncate">ID: {listing.id}</p>
-
-        {/* Action */}
-        {isSold ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
-            <Lock className="w-3.5 h-3.5" />
-            <span>Account Sold</span>
-          </div>
-        ) : (
-          <Button
-            size="sm"
-            className="w-full bg-gold/10 text-gold border border-gold/30 hover:bg-gold hover:text-background transition-all font-semibold text-sm group-hover:bg-gold group-hover:text-background"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-          >
-            <ShoppingCart className="w-3.5 h-3.5 mr-2" />
-            Purchase Account
-          </Button>
         )}
+
+        {/* Sold Overlay */}
+        {isSold && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+            <span className="text-lg font-bold text-muted-foreground uppercase tracking-widest">
+              Sold
+            </span>
+          </div>
+        )}
+
+        <div className="p-4 flex flex-col gap-3 flex-1">
+          {/* Rank */}
+          <div className="flex items-center justify-between">
+            <span className={`text-lg font-bold ${rankColor}`}>{listing.rank}</span>
+            <span className="text-xs text-muted-foreground font-mono">#{listing.id}</span>
+          </div>
+
+          {/* Rare Skins Section — only rendered when rareSkinNames is non-empty */}
+          {hasSkins && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1 text-xs font-semibold text-amber-500 uppercase tracking-wider">
+                <Sparkles className="w-3 h-3" />
+                Rare Skins
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {listing.rareSkinNames!.map((skin) => (
+                  <span
+                    key={skin}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium"
+                  >
+                    <Tag className="w-2.5 h-2.5" />
+                    {skin}
+                  </span>
+                ))}
+              </div>
+              {listing.rareSkinShowcaseLink && (
+                <a
+                  href={listing.rareSkinShowcaseLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View Skins
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Price */}
+          <div className="mt-auto">
+            <div className="text-2xl font-bold text-foreground">
+              {formatPrice(listing.priceE8s)}
+              <span className="text-sm font-normal text-muted-foreground ml-1">ICP</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Buy Button */}
+        <div className="px-4 pb-4">
+          <button
+            onClick={() => !isSold && setShowPurchase(true)}
+            disabled={isSold}
+            className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+              isSold
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
+          >
+            {isSold ? 'Sold' : 'Buy Now'}
+          </button>
+        </div>
       </div>
-    </div>
+
+      {showPurchase && (
+        <PurchaseFlowModal listing={listing} onClose={() => setShowPurchase(false)} />
+      )}
+    </>
   );
 }

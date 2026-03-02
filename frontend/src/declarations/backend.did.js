@@ -21,7 +21,9 @@ export const PublicListing = IDL.Record({
   'id' : IDL.Text,
   'status' : Status,
   'rank' : IDL.Text,
+  'rareSkinShowcaseLink' : IDL.Opt(IDL.Text),
   'specialDeal' : IDL.Bool,
+  'rareSkinNames' : IDL.Opt(IDL.Vec(IDL.Text)),
   'priceE8s' : IDL.Nat,
 });
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
@@ -65,7 +67,15 @@ export const PurchaseRecord = IDL.Record({
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addListing' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Nat, IDL.Bool, IDL.Vec(IDL.Nat8)],
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Bool,
+        IDL.Vec(IDL.Nat8),
+        IDL.Opt(IDL.Vec(IDL.Text)),
+        IDL.Opt(IDL.Text),
+      ],
       [],
       [],
     ),
@@ -114,6 +124,7 @@ export const idlService = IDL.Service({
     ),
   'hasPurchased' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'hideVouch' : IDL.Func([IDL.Text], [], []),
+  'isAdminClaimed' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listAllListings' : IDL.Func([], [IDL.Vec(PublicListing)], ['query']),
   'markSold' : IDL.Func([IDL.Text], [], []),
@@ -133,6 +144,17 @@ export const idlService = IDL.Service({
       [],
     ),
   'toggleSpecialDeal' : IDL.Func([IDL.Text], [], []),
+  'updateListing' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Nat,
+        IDL.Text,
+        IDL.Opt(IDL.Vec(IDL.Text)),
+        IDL.Opt(IDL.Text),
+      ],
+      [],
+      [],
+    ),
   'updateListingPrice' : IDL.Func([IDL.Text, IDL.Nat], [], []),
   'uploadCredential' : IDL.Func([IDL.Text, IDL.Vec(IDL.Nat8)], [], []),
   'verifyBtcPayment' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
@@ -153,7 +175,9 @@ export const idlFactory = ({ IDL }) => {
     'id' : IDL.Text,
     'status' : Status,
     'rank' : IDL.Text,
+    'rareSkinShowcaseLink' : IDL.Opt(IDL.Text),
     'specialDeal' : IDL.Bool,
+    'rareSkinNames' : IDL.Opt(IDL.Vec(IDL.Text)),
     'priceE8s' : IDL.Nat,
   });
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
@@ -197,7 +221,15 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addListing' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Nat, IDL.Bool, IDL.Vec(IDL.Nat8)],
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Bool,
+          IDL.Vec(IDL.Nat8),
+          IDL.Opt(IDL.Vec(IDL.Text)),
+          IDL.Opt(IDL.Text),
+        ],
         [],
         [],
       ),
@@ -246,6 +278,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'hasPurchased' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'hideVouch' : IDL.Func([IDL.Text], [], []),
+    'isAdminClaimed' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listAllListings' : IDL.Func([], [IDL.Vec(PublicListing)], ['query']),
     'markSold' : IDL.Func([IDL.Text], [], []),
@@ -265,6 +298,17 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'toggleSpecialDeal' : IDL.Func([IDL.Text], [], []),
+    'updateListing' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Nat,
+          IDL.Text,
+          IDL.Opt(IDL.Vec(IDL.Text)),
+          IDL.Opt(IDL.Text),
+        ],
+        [],
+        [],
+      ),
     'updateListingPrice' : IDL.Func([IDL.Text, IDL.Nat], [], []),
     'uploadCredential' : IDL.Func([IDL.Text, IDL.Vec(IDL.Nat8)], [], []),
     'verifyBtcPayment' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),

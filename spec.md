@@ -1,13 +1,17 @@
 # Specification
 
 ## Summary
-**Goal:** Add a one-time admin bootstrap mechanism so the first authenticated caller can claim the admin role, with all subsequent grants still requiring an existing admin.
+**Goal:** Add Rare Skins tagging/filtering, fix Special Deals visibility, rebrand to Ascension's Market, remove caffeine.ai attribution, and implement first-login admin claim.
 
 **Planned changes:**
-- Add a `claimAdmin` backend function that grants admin to the first authenticated (non-anonymous) caller; rejects all subsequent claims once an admin is set
-- Anonymous callers are rejected by `claimAdmin`
-- All existing admin-gated functions continue to enforce the stored `adminPrincipal` unchanged
-- On the frontend Admin Dashboard, show a prominent "Claim Admin" button when no admin has been claimed yet (instead of "Access Denied")
-- On successful claim, refresh admin status and render the full dashboard; on failure, show an error toast and display "Access Denied"
+- Extend the backend `AccountListing` data model with `rareSkinNames` (list of strings) and `rareSkinShowcaseLink` (optional URL); update `addListing` and `updateListing` to accept these fields; return them in all public listing queries.
+- Add a "Rare Skins" filter button next to the Unranked filter on the marketplace page; filtering shows only listings with at least one tagged skin name.
+- Display skin name badge chips on listing cards when `rareSkinNames` is non-empty; show a "View Skins" external link when `rareSkinShowcaseLink` is set; omit the skins section entirely when empty.
+- Add a Rare Skins tag input panel in the Admin Dashboard Listings Management section (type → Enter → chip appears, removable) plus a showcase URL text input and Save button, pre-populated when editing.
+- Investigate and fix why the Special Deals section is not appearing; audit the component, query hook, backend query, and rendering logic so the section renders whenever at least one listing has `specialDeal = true`.
+- Remove all "Built with caffeine.ai" branding text, links, and attribution from the entire frontend (Footer and any other location).
+- Rename all user-facing references from "R6 Market" to "Ascension's Market" across page titles, Header, Footer, hero section, Admin Dashboard, and all string literals.
+- Update the backend `claimAdmin` function so the first non-anonymous caller is permanently granted admin; subsequent non-admin calls are rejected; anonymous principals cannot claim admin.
+- Update the frontend Admin Dashboard to show the "Claim Admin" button only when no admin is set; show "Access Denied" for rejected non-admin attempts.
 
-**User-visible outcome:** The first user to log in and visit the Admin Dashboard can click "Claim Admin" to become the admin. Subsequent visitors who are not the admin see the standard "Access Denied" message, and the existing admin can still transfer the role via `updateAdmin`.
+**User-visible outcome:** The marketplace is fully rebranded as Ascension's Market, Special Deals appear correctly, admins can tag and showcase rare skins on listings with a dedicated filter, caffeine.ai branding is gone, and the first authenticated user to visit the admin page securely claims permanent admin rights.

@@ -17,7 +17,9 @@ export interface PublicListing {
   'id' : string,
   'status' : Status,
   'rank' : string,
+  'rareSkinShowcaseLink' : [] | [string],
   'specialDeal' : boolean,
+  'rareSkinNames' : [] | [Array<string>],
   'priceE8s' : bigint,
 }
 export interface PublicVouch {
@@ -58,7 +60,15 @@ export interface Vouch {
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addListing' : ActorMethod<
-    [string, string, bigint, boolean, Uint8Array],
+    [
+      string,
+      string,
+      bigint,
+      boolean,
+      Uint8Array,
+      [] | [Array<string>],
+      [] | [string],
+    ],
     undefined
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
@@ -93,6 +103,7 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'hasPurchased' : ActorMethod<[string], boolean>,
   'hideVouch' : ActorMethod<[string], undefined>,
+  'isAdminClaimed' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listAllListings' : ActorMethod<[], Array<PublicListing>>,
   'markSold' : ActorMethod<[string], undefined>,
@@ -107,6 +118,10 @@ export interface _SERVICE {
       { 'invalidRating' : null }
   >,
   'toggleSpecialDeal' : ActorMethod<[string], undefined>,
+  'updateListing' : ActorMethod<
+    [string, bigint, string, [] | [Array<string>], [] | [string]],
+    undefined
+  >,
   'updateListingPrice' : ActorMethod<[string, bigint], undefined>,
   'uploadCredential' : ActorMethod<[string, Uint8Array], undefined>,
   'verifyBtcPayment' : ActorMethod<[string, string, string], undefined>,

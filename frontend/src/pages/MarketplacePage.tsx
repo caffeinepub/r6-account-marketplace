@@ -1,125 +1,144 @@
-import React, { useState } from 'react';
-import { useListAllListings, useFilterByRank } from '../hooks/useQueries';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Zap, Shield } from 'lucide-react';
-import RankFilter from '../components/marketplace/RankFilter';
-import ListingCard from '../components/marketplace/ListingCard';
-import SpecialDealsSection from '../components/marketplace/SpecialDealsSection';
-import PurchaseFlowModal from '../components/purchase/PurchaseFlowModal';
+import React, { useState, useMemo } from 'react';
+import { useListAllListings, useGetSpecialDeals, useGetPublicVouches } from '../hooks/useQueries';
 import { Status } from '../backend';
 import type { PublicListing } from '../backend';
+import ListingCard from '../components/marketplace/ListingCard';
+import RankFilter from '../components/marketplace/RankFilter';
+import SpecialDealsSection from '../components/marketplace/SpecialDealsSection';
+import { Loader2, ShoppingBag, Star, TrendingUp } from 'lucide-react';
 
 export default function MarketplacePage() {
   const [selectedRank, setSelectedRank] = useState<string | null>(null);
-  const [selectedListing, setSelectedListing] = useState<PublicListing | null>(null);
+  const [showRareSkins, setShowRareSkins] = useState(false);
 
-  const { data: allListings, isLoading: allLoading } = useListAllListings();
-  const { data: filteredListings, isLoading: filterLoading } = useFilterByRank(selectedRank);
+  const { data: allListings = [], isLoading: listingsLoading } = useListAllListings();
+  const { data: specialDeals = [], isLoading: dealsLoading } = useGetSpecialDeals();
+  const { data: vouches = [] } = useGetPublicVouches();
 
-  const displayedListings = selectedRank ? filteredListings : allListings;
-  const isLoading = selectedRank ? filterLoading : allLoading;
+  const availableListings = useMemo(() => {
+    return allListings.filter((l) => l.status === Status.available);
+  }, [allListings]);
 
-  const availableCount =
-    displayedListings?.filter((l) => l.status === Status.available).length ?? 0;
+  const filteredListings = useMemo(() => {
+    let result = availableListings;
+
+    if (showRareSkins) {
+      result = result.filter(
+        (l) => l.rareSkinNames && l.rareSkinNames.length > 0
+      );
+    } else if (selectedRank) {
+      result = result.filter((l) => l.rank === selectedRank);
+    }
+
+    return result;
+  }, [availableListings, selectedRank, showRareSkins]);
+
+  const allRanks = useMemo(() => {
+    const ranks = new Set(availableListings.map((l) => l.rank));
+    return Array.from(ranks).sort();
+  }, [availableListings]);
+
+  const avgRating =
+    vouches.length > 0
+      ? (vouches.reduce((sum, v) => sum + Number(v.rating), 0) / vouches.length).toFixed(1)
+      : '5.0';
+
+  const handleRankSelect = (rank: string | null) => {
+    setSelectedRank(rank);
+    setShowRareSkins(false);
+  };
+
+  const handleRareSkins = () => {
+    setShowRareSkins((prev) => !prev);
+    setSelectedRank(null);
+  };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Hero Banner */}
-      <div className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-gradient-to-b from-gold/5 to-transparent pointer-events-none" />
-        <div className="container mx-auto px-4 py-6">
-          <img
-            src="/assets/generated/r6-market-banner.dim_1200x200.png"
-            alt="R6 Market — Premium Account Marketplace"
-            className="w-full max-w-4xl mx-auto rounded-sm object-cover"
-            style={{ maxHeight: '200px' }}
-          />
+      <div className="relative overflow-hidden">
+        <img
+          src="/assets/generated/ascensions-market-banner.dim_1200x300.png"
+          alt="Ascension's Market"
+          className="w-full object-cover max-h-64"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/40 to-transparent flex items-center">
+          <div className="px-8 py-6">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground drop-shadow-lg">
+              Ascension's Market
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Premium Rainbow Six Siege accounts — verified &amp; secure
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Stats Bar */}
-      <div className="border-b border-border bg-surface">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-muted-foreground">
-                <span className="text-foreground font-semibold">{availableCount}</span> accounts
-                available
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Shield className="w-3.5 h-3.5 text-gold" />
-              <span>Instant delivery after payment</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
-              <Zap className="w-3.5 h-3.5 text-gold" />
-              <span>ICP · BTC · ETH accepted</span>
-            </div>
+      <div className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap gap-6 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <ShoppingBag className="w-4 h-4 text-primary" />
+            <span>
+              <strong className="text-foreground">{availableListings.length}</strong> accounts available
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Star className="w-4 h-4 text-yellow-500" />
+            <span>
+              <strong className="text-foreground">{avgRating}</strong> avg rating ({vouches.length} reviews)
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <TrendingUp className="w-4 h-4 text-green-500" />
+            <span>
+              <strong className="text-foreground">{specialDeals.length}</strong> special deals
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-10">
-        {/* Special Deals */}
-        <SpecialDealsSection onSelectListing={setSelectedListing} />
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* Special Deals Section */}
+        <SpecialDealsSection deals={specialDeals} isLoading={dealsLoading} />
 
         {/* Rank Filter */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-2xl font-bold text-foreground tracking-wide">
-              ALL ACCOUNTS
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              {displayedListings?.length ?? 0} listings
-            </span>
-          </div>
-
-          <RankFilter selectedRank={selectedRank} onSelectRank={setSelectedRank} />
-        </div>
+        <RankFilter
+          ranks={allRanks}
+          selectedRank={selectedRank}
+          onSelectRank={handleRankSelect}
+          showRareSkins={showRareSkins}
+          onToggleRareSkins={handleRareSkins}
+        />
 
         {/* Listings Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-48 bg-surface-raised rounded-sm" />
-            ))}
+        {listingsLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : !displayedListings || displayedListings.length === 0 ? (
-          <div className="text-center py-20">
-            <Shield className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-muted-foreground text-lg font-display">
-              {selectedRank ? `No ${selectedRank} accounts available` : 'No accounts available'}
+        ) : filteredListings.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-medium">No listings found</p>
+            <p className="text-sm mt-1">
+              {showRareSkins
+                ? 'No listings with rare skins available.'
+                : selectedRank
+                ? `No available listings for rank "${selectedRank}".`
+                : 'No listings available at the moment.'}
             </p>
-            {selectedRank && (
-              <button
-                onClick={() => setSelectedRank(null)}
-                className="mt-3 text-sm text-gold hover:text-gold-bright transition-colors"
-              >
-                View all accounts
-              </button>
-            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {displayedListings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                onSelect={() => setSelectedListing(listing)}
-              />
+            {filteredListings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
             ))}
           </div>
         )}
       </div>
-
-      {/* Purchase Modal */}
-      {selectedListing && (
-        <PurchaseFlowModal
-          listing={selectedListing}
-          onClose={() => setSelectedListing(null)}
-        />
-      )}
     </div>
   );
 }

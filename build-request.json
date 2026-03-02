@@ -1,62 +1,164 @@
 {
   "kind": "build_request",
-  "title": "Bootstrap admin: first caller auto-granted admin, subsequent grants require existing admin",
-  "projectName": "R6 Market",
+  "title": "Rare Skins, Special Deals Fix, Rebrand to Ascension's Market, Remove Caffeine Branding, First-Login Admin Claim",
+  "projectName": "Ascension's Market",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-12",
-      "text": "Add a one-time admin bootstrap mechanism to the backend: if `adminPrincipal` has never been set (i.e., it holds a sentinel/anonymous value from initial deployment), the first authenticated caller of a new `claimAdmin` update function is automatically and permanently granted the `adminPrincipal` role. Subsequent calls to `claimAdmin` must be rejected once an admin is already set. All existing admin-only functions continue to require the caller to match the stored `adminPrincipal`.",
+      "id": "REQ-14",
+      "text": "Extend the backend AccountListing data model to include two new optional fields: (1) rareSkinNames — a list of text strings representing tagged skin names; (2) rareSkinShowcaseLink — an optional external URL string for a showcase link. Update all relevant admin update calls (addListing, updateListing) to accept and persist these new fields. Public listing queries must return these fields so the frontend can render them.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-latest"
         ],
         "quotes": [
-          "The first account to ever log in should be made admin - but none afterwards, unless defined by existing admin."
+          "admin can add an external showcase link and tag individual skin names (structured tag input: type -> Enter -> tag appears -> save)",
+          "skin names display on listing cards, omitted entirely if none tagged"
         ]
       },
       "acceptanceCriteria": [
-        "On a fresh deployment with no admin set, calling `claimAdmin` with an authenticated (non-anonymous) principal stores that principal as `adminPrincipal` and returns a success result.",
-        "A second call to `claimAdmin` from any principal returns an error and does not change `adminPrincipal`.",
-        "After bootstrap, the existing `updateAdmin` function (callable only by the current admin) remains the sole way to transfer or change the admin principal.",
-        "All previously gated admin functions (add/update/delete listing, upload credential, hide/delete vouch, etc.) continue to enforce that the caller matches `adminPrincipal`.",
-        "Anonymous callers are rejected by `claimAdmin` and receive an error."
+        "AccountListing record contains rareSkinNames : [Text] (defaults to empty list) and rareSkinShowcaseLink : ?Text (defaults to null).",
+        "Admin addListing and updateListing calls accept the new fields.",
+        "Public getListings and getListingById queries return rareSkinNames and rareSkinShowcaseLink.",
+        "Existing listings without these fields are treated as having empty rareSkinNames and null showcaseLink."
       ]
     },
     {
-      "id": "REQ-13",
-      "text": "Expose a `claimAdmin` call from the frontend Admin Dashboard page: if the authenticated user is not currently admin and no admin has been set yet (backend returns a designated 'unclaimed' status), display a prominent 'Claim Admin' button. On click, call the `claimAdmin` backend function and refresh the admin status check. If an admin is already set and the current user is not that admin, continue showing the existing 'Access Denied' message.",
+      "id": "REQ-15",
+      "text": "Add a Rare Skins filter button to the marketplace rank filter bar, placed alongside the existing Unranked filter button. When Rare Skins is active, the listings grid filters to show only listings that have at least one tagged skin name. On each listing card, if rareSkinNames is non-empty, display the skin names as small badge chip tags beneath the rank; if empty, omit the skins section entirely from the card. If rareSkinShowcaseLink is set, display a small View Skins link on the card that opens the URL in a new tab.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-latest"
         ],
         "quotes": [
-          "The first account to ever log in should be made admin - but none afterwards, unless defined by existing admin.",
-          "Please resolve so that I can test all functionality."
+          "Rare Skins section — placed alongside the Unranked filter on the marketplace page",
+          "skin names display on listing cards, omitted entirely if none tagged"
         ]
       },
       "acceptanceCriteria": [
-        "When the backend `adminPrincipal` is unset/unclaimed, the Admin Dashboard shows a 'Claim Admin' button instead of 'Access Denied'.",
-        "Clicking 'Claim Admin' invokes the `claimAdmin` backend function and, on success, refreshes the page/admin status so the full dashboard is displayed.",
-        "If `claimAdmin` fails (admin already claimed by another principal), an error toast is shown and the 'Access Denied' message is rendered.",
-        "Once the current user is confirmed as admin, the full dashboard renders normally without requiring a page reload beyond the query invalidation."
+        "A Rare Skins button appears in the rank filter row next to Unranked.",
+        "Selecting Rare Skins filters the listings grid to only show listings with at least one entry in rareSkinNames.",
+        "Each listing card shows skin name tags as badge chips when rareSkinNames is non-empty; the skins section is not rendered when rareSkinNames is empty.",
+        "If rareSkinShowcaseLink is set, a View Skins external link is shown on the card.",
+        "Selecting a rank resets the Rare Skins filter and vice versa."
+      ]
+    },
+    {
+      "id": "REQ-16",
+      "text": "In the Admin Dashboard Listings Management section, add a Rare Skins sub-panel for each listing. It must include: (1) a structured tag input field where the admin can type a skin name, press Enter to append it as a visible tag chip, and repeat; chips can be individually removed; (2) a text input for an optional external showcase link URL; (3) a Save button that calls the backend updateListing mutation with the updated rareSkinNames array and rareSkinShowcaseLink. The tag input must be available both when adding a new listing and when editing an existing one.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "admin can add an external showcase link and tag individual skin names (structured tag input: type -> Enter -> tag appears -> save)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Admin Listings Management shows a Rare Skins tag input panel per listing.",
+        "Typing a name and pressing Enter adds it as a removable chip; no duplicates allowed.",
+        "A separate text input accepts the showcase URL.",
+        "Clicking Save persists tags and link to the backend via the updateListing call.",
+        "The form is pre-populated with existing values when editing a listing."
+      ]
+    },
+    {
+      "id": "REQ-17",
+      "text": "Investigate and fix why the Special Deals section is not appearing on the marketplace page. Audit the SpecialDealsSection component, the useGetSpecialDeals query hook, the backend getSpecialDeals query, and the rendering logic in MarketplacePage.tsx. Ensure the section renders whenever at least one listing has specialDeal = true, including the correct query key, stale time, and conditional rendering guard. Fix any bugs found in data fetching, response mapping, or conditional display.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Special Deals fix — investigating and resolving why the tab/section isn't appearing"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When at least one listing has specialDeal = true, the Special Deals section is visible on the marketplace page.",
+        "The section is hidden only when no special-deal listings exist.",
+        "Loading and error states are handled gracefully.",
+        "No console errors related to Special Deals queries or rendering."
+      ]
+    },
+    {
+      "id": "REQ-18",
+      "text": "Remove all Built with caffeine.ai branding text, links, and attribution from the entire frontend codebase. This includes the Footer component, any inline HTML, and any other component or page that references caffeine.ai or Built with. Do not replace it with any other attribution.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Remove Built with caffeine.ai branding — stripped from all frontend locations"
+        ]
+      },
+      "acceptanceCriteria": [
+        "No visible Built with caffeine.ai text appears anywhere in the app.",
+        "No href or anchor referencing caffeine.ai exists in the rendered HTML.",
+        "Footer and all other components compile and render without the attribution."
+      ]
+    },
+    {
+      "id": "REQ-19",
+      "text": "Rename the marketplace from R6 Market to Ascension's Market across the entire frontend. Update all occurrences in: page titles, Header component branding text, Footer brand name, hero section heading on MarketplacePage, the logo/banner image alt text and any rendered text overlay, Admin Dashboard page title, and any other string literal or constant referencing R6 Market.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Rename to Ascension's Market — all header text, branding, page titles, logo/banner, and references updated throughout"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Browser tab and document title reads Ascension's Market.",
+        "Header logo and branding text displays Ascension's Market.",
+        "Footer brand name is Ascension's Market.",
+        "Hero section on the marketplace page refers to Ascension's Market.",
+        "No remaining occurrences of R6 Market in any user-facing string."
+      ]
+    },
+    {
+      "id": "REQ-20",
+      "text": "Update the backend claimAdmin function so that: (1) if adminPrincipal is still the sentinel unclaimed value, the first authenticated non-anonymous caller is permanently granted adminPrincipal; (2) once an admin is set, any further claimAdmin call from a non-admin caller is rejected with an error; (3) an anonymous principal can never claim admin. Update the frontend Admin Dashboard so the Claim Admin button is shown only when no admin is yet set, and subsequent non-admin attempts show the Access Denied state.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "First-login admin claim — first principal to call claimAdmin is permanently granted admin; all subsequent calls require an existing admin to authorise"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The first non-anonymous caller of claimAdmin becomes the permanent adminPrincipal.",
+        "Subsequent claimAdmin calls from non-admin principals are rejected.",
+        "Anonymous principal cannot claim admin.",
+        "Frontend shows Claim Admin button only when no admin is set.",
+        "After successful claim, the dashboard loads admin sections immediately.",
+        "Non-admin users whose claim is rejected see the Access Denied message."
       ]
     }
   ],
   "constraints": [
-    "Do not change existing admin-gated function signatures or access control checks — only add the bootstrap `claimAdmin` path.",
-    "The bootstrap claim must be a one-shot operation: once `adminPrincipal` is set via `claimAdmin`, the function must permanently reject further claims.",
-    "Anonymous principals must never be granted admin via any path."
+    "Do not alter immutable frontend paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "All Motoko logic must remain in the single backend/main.mo actor.",
+    "Preserve existing rank filter, listings grid, and purchase flow behaviour."
   ],
   "nonGoals": [
-    "Multi-admin or role-based access control — a single adminPrincipal remains the model.",
-    "Resetting or revoking admin via `claimAdmin` — only the existing `updateAdmin` flow handles transfers.",
-    "Any changes to purchase, credential, or vouch logic unrelated to the admin bootstrap."
+    "Changing the payment flow or credential vault logic.",
+    "Adding real-time notifications or WebSocket features.",
+    "Modifying the vouch/review submission logic.",
+    "Changing the dark tactical visual theme beyond renaming branding."
   ],
   "imageRequirements": {
     "required": [],
-    "edits": []
+    "edits": [
+      "Replace the text R6 Market with Ascensions Market in the same bold military typeface keeping the dark near-black background with gold and red accents and the siege/shield emblem (marketplace-banner.dim_1200x300.png > ascensions-market-banner.dim_1200x300.png)"
+    ]
   }
 }

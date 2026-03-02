@@ -1,27 +1,158 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Bootstrap admin: first caller auto-granted admin, subsequent grants require existing admin",
+  "title": "Rare Skins, Special Deals Fix, Rebrand to Ascension's Market, Remove Caffeine Branding, First-Login Admin Claim",
   "requirements": [
     {
-      "id": "REQ-13",
-      "summary": "Add 'Claim Admin' button to Admin Dashboard when no admin is set, allowing the first authenticated user to claim the admin role via the claimAdmin backend function.",
+      "id": "REQ-15",
+      "summary": "Add Rare Skins filter button to marketplace rank filter bar; display skin name badges and showcase link on listing cards when present",
       "acceptanceCriteria": [
-        "When the backend `adminPrincipal` is unset/unclaimed, the Admin Dashboard shows a 'Claim Admin' button instead of 'Access Denied'.",
-        "Clicking 'Claim Admin' invokes the `claimAdmin` backend function and, on success, refreshes the page/admin status so the full dashboard is displayed.",
-        "If `claimAdmin` fails (admin already claimed by another principal), an error toast is shown and the 'Access Denied' message is rendered.",
-        "Once the current user is confirmed as admin, the full dashboard renders normally without requiring a page reload beyond the query invalidation."
+        "A Rare Skins button appears in the rank filter row next to Unranked.",
+        "Selecting Rare Skins filters the listings grid to only show listings with at least one entry in rareSkinNames.",
+        "Each listing card shows skin name tags as badge chips when rareSkinNames is non-empty; the skins section is not rendered when rareSkinNames is empty.",
+        "If rareSkinShowcaseLink is set, a View Skins external link is shown on the card.",
+        "Selecting a rank resets the Rare Skins filter and vice versa."
       ],
       "file_operations": [
         {
+          "path": "frontend/src/components/marketplace/RankFilter.tsx",
+          "operation": "modify",
+          "description": "Add a Rare Skins filter button next to the Unranked button. When active, filter the listings to show only those with non-empty rareSkinNames arrays. Ensure selecting a rank deactivates the Rare Skins filter and vice versa."
+        },
+        {
+          "path": "frontend/src/components/marketplace/ListingCard.tsx",
+          "operation": "modify",
+          "description": "Add conditional rendering for rare skins display. If rareSkinNames is non-empty, render skin name badge chips beneath the rank. If rareSkinShowcaseLink is set, display a View Skins external link that opens in a new tab. Omit the skins section entirely when rareSkinNames is empty."
+        },
+        {
+          "path": "frontend/src/pages/MarketplacePage.tsx",
+          "operation": "modify",
+          "description": "Wire the Rare Skins filter state from RankFilter into the listings grid filtering logic. Ensure the filter is applied client-side to show only listings with at least one tagged skin name when active."
+        }
+      ]
+    },
+    {
+      "id": "REQ-16",
+      "summary": "Add Rare Skins management panel in Admin Dashboard Listings Management with structured tag input, showcase link field, and save functionality",
+      "acceptanceCriteria": [
+        "Admin Listings Management shows a Rare Skins tag input panel per listing.",
+        "Typing a name and pressing Enter adds it as a removable chip; no duplicates allowed.",
+        "A separate text input accepts the showcase URL.",
+        "Clicking Save persists tags and link to the backend via the updateListing call.",
+        "The form is pre-populated with existing values when editing a listing."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/admin/ListingsManagement.tsx",
+          "operation": "modify",
+          "description": "Add a Rare Skins sub-panel to the listing form (both add and edit modes). Include a structured tag input where admins type a skin name and press Enter to create a removable chip tag. Add a text input for the optional showcase link URL. Update the save handler to include rareSkinNames array and rareSkinShowcaseLink in the backend updateListing and addListing calls. Pre-populate existing values when editing."
+        },
+        {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add a useClaimAdmin mutation hook that calls the backend claimAdmin function and returns the result (success or alreadyClaimed). The mutation should invalidate the 'isCallerAdmin' query on success to trigger an immediate admin status refresh."
+          "description": "Update the useAddListing and useUpdateListing mutation hooks to accept rareSkinNames (array of strings) and rareSkinShowcaseLink (optional string) parameters and pass them to the backend actor calls."
+        }
+      ]
+    },
+    {
+      "id": "REQ-17",
+      "summary": "Investigate and fix why Special Deals section is not appearing on the marketplace page",
+      "acceptanceCriteria": [
+        "When at least one listing has specialDeal = true, the Special Deals section is visible on the marketplace page.",
+        "The section is hidden only when no special-deal listings exist.",
+        "Loading and error states are handled gracefully.",
+        "No console errors related to Special Deals queries or rendering."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/marketplace/SpecialDealsSection.tsx",
+          "operation": "modify",
+          "description": "Audit the component for correct query key usage, stale time configuration, and conditional rendering logic. Ensure the section renders whenever the useGetSpecialDeals hook returns a non-empty array. Fix any bugs in data fetching, response mapping, or display guards. Handle loading and error states gracefully."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Review the useGetSpecialDeals query hook implementation. Verify the query key is correct, the backend actor call is properly typed, and the query is enabled when the actor is available. Fix any stale time or caching issues that might prevent fresh data from appearing."
+        },
+        {
+          "path": "frontend/src/pages/MarketplacePage.tsx",
+          "operation": "modify",
+          "description": "Ensure the SpecialDealsSection component is rendered with correct conditional logic. Verify it is not accidentally hidden by layout or styling issues. Confirm the component receives the correct data from the query hook and that no parent wrapper is preventing its display."
+        }
+      ]
+    },
+    {
+      "id": "REQ-18",
+      "summary": "Remove all Built with caffeine.ai branding text, links, and attribution from the frontend",
+      "acceptanceCriteria": [
+        "No visible Built with caffeine.ai text appears anywhere in the app.",
+        "No href or anchor referencing caffeine.ai exists in the rendered HTML.",
+        "Footer and all other components compile and render without the attribution."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/layout/Footer.tsx",
+          "operation": "modify",
+          "description": "Remove the caffeine.ai attribution text and link from the footer. Do not replace it with any other attribution. Ensure the footer still renders correctly with the remaining content."
+        }
+      ]
+    },
+    {
+      "id": "REQ-19",
+      "summary": "Rename the marketplace from R6 Market to Ascension's Market across the entire frontend",
+      "acceptanceCriteria": [
+        "Browser tab and document title reads Ascension's Market.",
+        "Header logo and branding text displays Ascension's Market.",
+        "Footer brand name is Ascension's Market.",
+        "Hero section on the marketplace page refers to Ascension's Market.",
+        "No remaining occurrences of R6 Market in any user-facing string."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Update the document title from R6 Market to Ascension's Market."
+        },
+        {
+          "path": "frontend/src/components/layout/Header.tsx",
+          "operation": "modify",
+          "description": "Replace all occurrences of R6 Market with Ascension's Market in the header branding text and logo alt text."
+        },
+        {
+          "path": "frontend/src/components/layout/Footer.tsx",
+          "operation": "modify",
+          "description": "Replace R6 Market with Ascension's Market in the footer brand name."
+        },
+        {
+          "path": "frontend/src/pages/MarketplacePage.tsx",
+          "operation": "modify",
+          "description": "Update the hero section heading and any other R6 Market references to Ascension's Market. Update the banner image reference from frontend/public/assets/generated/r6-market-banner.dim_1200x200.png to frontend/public/assets/generated/ascensions-market-banner.dim_1200x300.png and ensure the alt text reads Ascension's Market."
         },
         {
           "path": "frontend/src/pages/AdminDashboard.tsx",
           "operation": "modify",
-          "description": "Modify the access control logic to check if admin is unclaimed by calling claimAdmin when access is denied. If the backend returns 'alreadyClaimed', show the existing 'Access Denied' message. If admin is unclaimed (detected by attempting a safe query or inferred from isCallerAdmin returning false on a fresh deployment), display a prominent 'Claim Admin' button. On button click, invoke the useClaimAdmin mutation, show a loading state, and on success invalidate the admin status query to render the full dashboard. On failure (alreadyClaimed), display an error toast and the 'Access Denied' message. Ensure the flow does not require a manual page reload."
+          "description": "Replace R6 Market with Ascension's Market in the Admin Dashboard page title and any visible headings or text."
+        }
+      ]
+    },
+    {
+      "id": "REQ-20",
+      "summary": "Update frontend Admin Dashboard to show Claim Admin button only when no admin is set, and handle subsequent non-admin claim attempts with Access Denied state",
+      "acceptanceCriteria": [
+        "Frontend shows Claim Admin button only when no admin is set.",
+        "After successful claim, the dashboard loads admin sections immediately.",
+        "Non-admin users whose claim is rejected see the Access Denied message."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/AdminDashboard.tsx",
+          "operation": "modify",
+          "description": "Update the admin claim flow to first check if an admin is already set using the isAdminClaimed backend query. Show the Claim Admin button only when isAdminClaimed returns false. After a successful claimAdmin call, invalidate the admin status query cache and immediately load the admin dashboard sections. Handle the alreadyClaimed response variant by showing an Access Denied message for non-admin users."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a useIsAdminClaimed query hook that calls the backend isAdminClaimed method. Ensure proper query key and caching so the claim button visibility reacts correctly to backend state."
         }
       ]
     }

@@ -10,12 +10,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useGetPurchasesByBuyer } from '../../hooks/useQueries';
+import { useInternetIdentity } from '../../hooks/useInternetIdentity';
+import { useGetPurchaseByBuyer } from '../../hooks/useQueries';
 import { formatTimestamp } from '../../lib/utils';
 import { Variant_pending_confirmed_failed, PaymentMethod } from '../../backend';
 
 export default function PurchasesView() {
-  const { data: purchases, isLoading, refetch } = useGetPurchasesByBuyer();
+  const { identity } = useInternetIdentity();
+  const principalStr = identity?.getPrincipal().toString();
+
+  const { data: purchases, isLoading, refetch } = useGetPurchaseByBuyer(principalStr);
 
   const getStatusBadge = (status: Variant_pending_confirmed_failed) => {
     switch (status) {
@@ -36,7 +40,11 @@ export default function PurchasesView() {
           <Badge className="bg-red-500/10 text-red-400 border-red-500/30 text-xs">Failed</Badge>
         );
       default:
-        return <Badge variant="secondary" className="text-xs">{String(status)}</Badge>;
+        return (
+          <Badge variant="secondary" className="text-xs">
+            {String(status)}
+          </Badge>
+        );
     }
   };
 

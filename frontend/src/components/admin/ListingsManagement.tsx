@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
+import {
+  useListAllListings,
+  useAddListing,
+  useUpdateListing,
+  useDeleteListing,
+  useToggleSpecialDeal,
+  useMarkSold,
+} from '../../hooks/useQueries';
+import { Status } from '../../backend';
+import type { PublicListing } from '../../backend';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Badge } from '../ui/badge';
 import {
   Table,
   TableBody,
@@ -11,358 +19,481 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Plus, Trash2, DollarSign, Loader2, RefreshCw } from 'lucide-react';
+} from '../ui/table';
 import {
-  useListAllListings,
-  useAddListing,
-  useUpdateListingPrice,
-  useToggleSpecialDeal,
-  useMarkSold,
-  useDeleteListing,
-} from '../../hooks/useQueries';
-import { formatICP, RANKS, RANK_COLORS, RANK_ICONS } from '../../lib/utils';
-import { Status } from '../../backend';
-import { toast } from 'sonner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
+import { Label } from '../ui/label';
+import { Loader2, Plus, Pencil, Trash2, Tag, X, Sparkles, ExternalLink } from 'lucide-react';
 
-export default function ListingsManagement() {
-  const { data: listings, isLoading, refetch } = useListAllListings();
-  const addListing = useAddListing();
-  const updatePrice = useUpdateListingPrice();
-  const toggleDeal = useToggleSpecialDeal();
-  const markSold = useMarkSold();
-  const deleteListing = useDeleteListing();
+interface ListingFormData {
+  id: string;
+  rank: string;
+  priceIcp: string;
+  specialDeal: boolean;
+  credentialText: string;
+  rareSkinNames: string[];
+  rareSkinShowcaseLink: string;
+}
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingPrice, setEditingPrice] = useState<{ id: string; value: string } | null>(null);
+const defaultForm: ListingFormData = {
+  id: '',
+  rank: '',
+  priceIcp: '',
+  specialDeal: false,
+  credentialText: '',
+  rareSkinNames: [],
+  rareSkinShowcaseLink: '',
+};
 
-  // New listing form state
-  const [newId, setNewId] = useState('');
-  const [newRank, setNewRank] = useState('Gold');
-  const [newPrice, setNewPrice] = useState('');
-  const [newSpecialDeal, setNewSpecialDeal] = useState(false);
+function SkinTagInput({
+  tags,
+  onChange,
+}: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [inputValue, setInputValue] = useState('');
 
-  const handleAddListing = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newId.trim() || !newPrice.trim()) return;
-    try {
-      const priceE8s = BigInt(Math.round(parseFloat(newPrice) * 1e8));
-      await addListing.mutateAsync({
-        id: newId.trim(),
-        rank: newRank,
-        priceE8s,
-        specialDeal: newSpecialDeal,
-        encryptedCredentialRef: new Uint8Array(0),
-      });
-      toast.success('Listing added successfully!');
-      setNewId('');
-      setNewPrice('');
-      setNewSpecialDeal(false);
-      setShowForm(false);
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.error(error?.message || 'Failed to add listing.');
+  const addTag = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      onChange([...tags, trimmed]);
+    }
+    setInputValue('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
     }
   };
 
-  const handleUpdatePrice = async (id: string) => {
-    if (!editingPrice || editingPrice.id !== id) return;
-    try {
-      const priceE8s = BigInt(Math.round(parseFloat(editingPrice.value) * 1e8));
-      await updatePrice.mutateAsync({ id, priceE8s });
-      toast.success('Price updated!');
-      setEditingPrice(null);
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.error(error?.message || 'Failed to update price.');
-    }
-  };
-
-  const handleToggleDeal = async (id: string) => {
-    try {
-      await toggleDeal.mutateAsync(id);
-      toast.success('Special deal toggled!');
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.error(error?.message || 'Failed to toggle deal.');
-    }
-  };
-
-  const handleMarkSold = async (id: string) => {
-    try {
-      await markSold.mutateAsync(id);
-      toast.success('Listing marked as sold.');
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.error(error?.message || 'Failed to mark sold.');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm(`Delete listing "${id}"? This cannot be undone.`)) return;
-    try {
-      await deleteListing.mutateAsync(id);
-      toast.success('Listing deleted.');
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.error(error?.message || 'Failed to delete listing.');
-    }
+  const removeTag = (tag: string) => {
+    onChange(tags.filter((t) => t !== tag));
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-bold text-foreground">Listings Management</h2>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            className="border-border text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setShowForm(!showForm)}
-            className="bg-gold text-background hover:bg-gold-bright font-semibold"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Listing
-          </Button>
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type skin name, press Enter"
+          className="flex-1"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={addTag}>
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium"
+            >
+              <Tag className="w-2.5 h-2.5" />
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                className="ml-0.5 hover:text-destructive transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+export default function ListingsManagement() {
+  const { data: listings = [], isLoading } = useListAllListings();
+  const addListing = useAddListing();
+  const updateListing = useUpdateListing();
+  const deleteListing = useDeleteListing();
+  const toggleSpecialDeal = useToggleSpecialDeal();
+  const markSold = useMarkSold();
+
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingListing, setEditingListing] = useState<PublicListing | null>(null);
+  const [form, setForm] = useState<ListingFormData>(defaultForm);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const openAdd = () => {
+    setForm(defaultForm);
+    setShowAddDialog(true);
+  };
+
+  const openEdit = (listing: PublicListing) => {
+    setEditingListing(listing);
+    setForm({
+      id: listing.id,
+      rank: listing.rank,
+      priceIcp: (Number(listing.priceE8s) / 1e8).toString(),
+      specialDeal: listing.specialDeal,
+      credentialText: '',
+      rareSkinNames: listing.rareSkinNames ? [...listing.rareSkinNames] : [],
+      rareSkinShowcaseLink: listing.rareSkinShowcaseLink || '',
+    });
+  };
+
+  const closeDialogs = () => {
+    setShowAddDialog(false);
+    setEditingListing(null);
+    setForm(defaultForm);
+  };
+
+  const handleAdd = async () => {
+    const priceE8s = BigInt(Math.round(parseFloat(form.priceIcp) * 1e8));
+    const credBytes = new TextEncoder().encode(form.credentialText || 'placeholder');
+    await addListing.mutateAsync({
+      id: form.id,
+      rank: form.rank,
+      priceE8s,
+      specialDeal: form.specialDeal,
+      encryptedCredentialRef: credBytes,
+      rareSkinNames: form.rareSkinNames.length > 0 ? form.rareSkinNames : null,
+      rareSkinShowcaseLink: form.rareSkinShowcaseLink.trim() || null,
+    });
+    closeDialogs();
+  };
+
+  const handleUpdate = async () => {
+    if (!editingListing) return;
+    const priceE8s = BigInt(Math.round(parseFloat(form.priceIcp) * 1e8));
+    await updateListing.mutateAsync({
+      id: editingListing.id,
+      priceE8s,
+      rank: form.rank,
+      rareSkinNames: form.rareSkinNames.length > 0 ? form.rareSkinNames : null,
+      rareSkinShowcaseLink: form.rareSkinShowcaseLink.trim() || null,
+    });
+    closeDialogs();
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteListing.mutateAsync(id);
+    setDeleteConfirm(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-foreground">Listings Management</h2>
+        <Button onClick={openAdd} size="sm" className="flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Add Listing
+        </Button>
       </div>
 
-      {/* Add Listing Form */}
-      {showForm && (
-        <form
-          onSubmit={handleAddListing}
-          className="p-4 bg-surface-raised border border-gold/20 rounded-sm space-y-4 animate-slide-up"
-        >
-          <h3 className="font-semibold text-foreground text-sm">New Listing</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Account ID</Label>
-              <Input
-                value={newId}
-                onChange={(e) => setNewId(e.target.value)}
-                placeholder="e.g. acc_001"
-                className="bg-surface border-border focus:border-gold text-sm"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Rank</Label>
-              <Select value={newRank} onValueChange={setNewRank}>
-                <SelectTrigger className="bg-surface border-border focus:border-gold text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-surface-raised border-border">
-                  {RANKS.map((r) => (
-                    <SelectItem
-                      key={r}
-                      value={r}
-                      className="text-foreground hover:bg-surface-overlay"
+      <div className="rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Rank</TableHead>
+              <TableHead>Price (ICP)</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Special</TableHead>
+              <TableHead>Rare Skins</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {listings.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  No listings yet. Add one to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              listings.map((listing) => (
+                <TableRow key={listing.id}>
+                  <TableCell className="font-mono text-xs">{listing.id}</TableCell>
+                  <TableCell>{listing.rank}</TableCell>
+                  <TableCell>{(Number(listing.priceE8s) / 1e8).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={listing.status === Status.sold ? 'secondary' : 'default'}
+                      className={listing.status === Status.available ? 'bg-green-500/20 text-green-400 border-green-500/30' : ''}
                     >
-                      {RANK_ICONS[r]} {r}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      {listing.status === Status.sold ? 'Sold' : 'Available'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => toggleSpecialDeal.mutate(listing.id)}
+                      disabled={toggleSpecialDeal.isPending}
+                      className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                        listing.specialDeal
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30'
+                          : 'bg-muted text-muted-foreground border-border hover:border-amber-500/30'
+                      }`}
+                    >
+                      {listing.specialDeal ? 'Yes' : 'No'}
+                    </button>
+                  </TableCell>
+                  <TableCell>
+                    {listing.rareSkinNames && listing.rareSkinNames.length > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                        <span className="text-xs text-amber-400">{listing.rareSkinNames.length} skin(s)</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {listing.status === Status.available && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => markSold.mutate(listing.id)}
+                          disabled={markSold.isPending}
+                          title="Mark as sold"
+                        >
+                          {markSold.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <span className="text-xs">Sell</span>
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEdit(listing)}
+                        title="Edit listing"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteConfirm(listing.id)}
+                        title="Delete listing"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Add Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={(open) => !open && closeDialogs()}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Listing</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Listing ID</Label>
+                <Input
+                  value={form.id}
+                  onChange={(e) => setForm({ ...form, id: e.target.value })}
+                  placeholder="e.g. acc-001"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Rank</Label>
+                <Input
+                  value={form.rank}
+                  onChange={(e) => setForm({ ...form, rank: e.target.value })}
+                  placeholder="e.g. Diamond"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Price (ICP)</Label>
+            <div className="space-y-1">
+              <Label>Price (ICP)</Label>
               <Input
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="e.g. 5.00"
                 type="number"
-                step="0.01"
+                value={form.priceIcp}
+                onChange={(e) => setForm({ ...form, priceIcp: e.target.value })}
+                placeholder="e.g. 5.00"
                 min="0"
-                className="bg-surface border-border focus:border-gold text-sm"
-                required
+                step="0.01"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Special Deal</Label>
-              <div className="flex items-center gap-2 h-9">
-                <Switch
-                  checked={newSpecialDeal}
-                  onCheckedChange={setNewSpecialDeal}
-                  className="data-[state=checked]:bg-gold"
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="specialDeal-add"
+                checked={form.specialDeal}
+                onChange={(e) => setForm({ ...form, specialDeal: e.target.checked })}
+                className="rounded"
+              />
+              <Label htmlFor="specialDeal-add">Special Deal</Label>
+            </div>
+            <div className="space-y-1">
+              <Label>Credential (plaintext — will be encoded)</Label>
+              <Input
+                value={form.credentialText}
+                onChange={(e) => setForm({ ...form, credentialText: e.target.value })}
+                placeholder="username:password"
+              />
+            </div>
+
+            {/* Rare Skins Panel */}
+            <div className="space-y-2 border border-amber-500/20 rounded-lg p-3 bg-amber-500/5">
+              <div className="flex items-center gap-2 text-amber-500 font-semibold text-sm">
+                <Sparkles className="w-4 h-4" />
+                Rare Skins
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Skin Names (type + Enter to add)</Label>
+                <SkinTagInput
+                  tags={form.rareSkinNames}
+                  onChange={(tags) => setForm({ ...form, rareSkinNames: tags })}
                 />
-                <span className="text-sm text-muted-foreground">
-                  {newSpecialDeal ? 'Yes' : 'No'}
-                </span>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" />
+                  Showcase Link (optional)
+                </Label>
+                <Input
+                  value={form.rareSkinShowcaseLink}
+                  onChange={(e) => setForm({ ...form, rareSkinShowcaseLink: e.target.value })}
+                  placeholder="https://..."
+                />
               </div>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowForm(false)}
-              className="border-border text-muted-foreground"
-            >
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialogs}>
               Cancel
             </Button>
             <Button
-              type="submit"
-              size="sm"
-              disabled={addListing.isPending}
-              className="bg-gold text-background hover:bg-gold-bright font-semibold"
+              onClick={handleAdd}
+              disabled={addListing.isPending || !form.id || !form.rank || !form.priceIcp}
             >
-              {addListing.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Add Listing'
-              )}
+              {addListing.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Add Listing
             </Button>
-          </div>
-        </form>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Listings Table */}
-      {isLoading ? (
-        <div className="text-center py-10">
-          <Loader2 className="w-6 h-6 text-gold animate-spin mx-auto" />
-        </div>
-      ) : !listings || listings.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">No listings yet.</div>
-      ) : (
-        <div className="overflow-x-auto rounded-sm border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground text-xs">ID</TableHead>
-                <TableHead className="text-muted-foreground text-xs">Rank</TableHead>
-                <TableHead className="text-muted-foreground text-xs">Price</TableHead>
-                <TableHead className="text-muted-foreground text-xs">Deal</TableHead>
-                <TableHead className="text-muted-foreground text-xs">Status</TableHead>
-                <TableHead className="text-muted-foreground text-xs text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listings.map((listing) => {
-                const rankColor = RANK_COLORS[listing.rank] || '';
-                // Status is an enum value, compare directly
-                const isSold = listing.status === Status.sold;
-                return (
-                  <TableRow key={listing.id} className="border-border hover:bg-surface-raised">
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {listing.id}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-sm border ${rankColor}`}
-                      >
-                        {RANK_ICONS[listing.rank]} {listing.rank}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {editingPrice?.id === listing.id ? (
-                        <div className="flex items-center gap-1">
-                          <Input
-                            value={editingPrice.value}
-                            onChange={(e) =>
-                              setEditingPrice({ id: listing.id, value: e.target.value })
-                            }
-                            className="w-20 h-7 text-xs bg-surface border-border"
-                            type="number"
-                            step="0.01"
-                          />
-                          <Button
-                            size="sm"
-                            className="h-7 px-2 bg-gold text-background text-xs"
-                            onClick={() => handleUpdatePrice(listing.id)}
-                            disabled={updatePrice.isPending}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => setEditingPrice(null)}
-                          >
-                            ✕
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            setEditingPrice({
-                              id: listing.id,
-                              value: (Number(listing.priceE8s) / 1e8).toString(),
-                            })
-                          }
-                          className="text-gold text-sm font-semibold hover:text-gold-bright transition-colors flex items-center gap-1"
-                        >
-                          {formatICP(listing.priceE8s)}
-                          <DollarSign className="w-3 h-3 opacity-50" />
-                        </button>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={listing.specialDeal}
-                        onCheckedChange={() => handleToggleDeal(listing.id)}
-                        className="data-[state=checked]:bg-gold scale-75"
-                        disabled={toggleDeal.isPending}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={isSold ? 'secondary' : 'default'}
-                        className={
-                          isSold
-                            ? 'bg-surface-overlay text-muted-foreground border-border text-xs'
-                            : 'bg-green-500/10 text-green-400 border-green-500/30 text-xs'
-                        }
-                      >
-                        {isSold ? 'Sold' : 'Available'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {!isSold && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                            onClick={() => handleMarkSold(listing.id)}
-                            disabled={markSold.isPending}
-                          >
-                            Mark Sold
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                          onClick={() => handleDelete(listing.id)}
-                          disabled={deleteListing.isPending}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      {/* Edit Dialog */}
+      <Dialog open={!!editingListing} onOpenChange={(open) => !open && closeDialogs()}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Listing #{editingListing?.id}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label>Rank</Label>
+              <Input
+                value={form.rank}
+                onChange={(e) => setForm({ ...form, rank: e.target.value })}
+                placeholder="e.g. Diamond"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Price (ICP)</Label>
+              <Input
+                type="number"
+                value={form.priceIcp}
+                onChange={(e) => setForm({ ...form, priceIcp: e.target.value })}
+                placeholder="e.g. 5.00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            {/* Rare Skins Panel */}
+            <div className="space-y-2 border border-amber-500/20 rounded-lg p-3 bg-amber-500/5">
+              <div className="flex items-center gap-2 text-amber-500 font-semibold text-sm">
+                <Sparkles className="w-4 h-4" />
+                Rare Skins
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Skin Names (type + Enter to add)</Label>
+                <SkinTagInput
+                  tags={form.rareSkinNames}
+                  onChange={(tags) => setForm({ ...form, rareSkinNames: tags })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" />
+                  Showcase Link (optional)
+                </Label>
+                <Input
+                  value={form.rareSkinShowcaseLink}
+                  onChange={(e) => setForm({ ...form, rareSkinShowcaseLink: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialogs}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdate}
+              disabled={updateListing.isPending || !form.rank || !form.priceIcp}
+            >
+              {updateListing.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Listing</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            Are you sure you want to delete listing <strong>#{deleteConfirm}</strong>? This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              disabled={deleteListing.isPending}
+            >
+              {deleteListing.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

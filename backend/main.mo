@@ -6,13 +6,15 @@ import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-import Migration "migration";
+
 import Iter "mo:core/Iter";
 import Nat "mo:core/Nat";
+import Migration "migration";
 import OutCall "http-outcalls/outcall";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
+// Enable migration via with-clause
 (with migration = Migration.run)
 actor {
   type Status = {
@@ -33,6 +35,8 @@ actor {
     specialDeal : Bool;
     status : Status;
     encryptedCredentialRef : Blob;
+    rareSkinNames : ?[Text];
+    rareSkinShowcaseLink : ?Text;
   };
 
   type PublicListing = {
@@ -41,6 +45,8 @@ actor {
     priceE8s : Nat;
     specialDeal : Bool;
     status : Status;
+    rareSkinNames : ?[Text];
+    rareSkinShowcaseLink : ?Text;
   };
 
   module PublicListing {
@@ -120,7 +126,7 @@ actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+    if (caller != user and not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
     userProfiles.get(user);
@@ -135,7 +141,15 @@ actor {
 
   // ─── Marketplace Functions ────────────────────────────────────────────────
 
-  public shared ({ caller }) func addListing(id : Text, rank : Text, priceE8s : Nat, specialDeal : Bool, encryptedCredentialRef : Blob) : async () {
+  public shared ({ caller }) func addListing(
+    id : Text,
+    rank : Text,
+    priceE8s : Nat,
+    specialDeal : Bool,
+    encryptedCredentialRef : Blob,
+    rareSkinNames : ?[Text],
+    rareSkinShowcaseLink : ?Text,
+  ) : async () {
     if (not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Admins only");
     };
@@ -146,6 +160,8 @@ actor {
       specialDeal;
       status = #available;
       encryptedCredentialRef;
+      rareSkinNames;
+      rareSkinShowcaseLink;
     };
     listings.add(id, listing);
   };
@@ -186,6 +202,32 @@ actor {
     };
   };
 
+  public shared ({ caller }) func updateListing(
+    id : Text,
+    priceE8s : Nat,
+    rank : Text,
+    rareSkinNames : ?[Text],
+    rareSkinShowcaseLink : ?Text,
+  ) : async () {
+    if (not isAdmin(caller)) {
+      Runtime.trap("Unauthorized: Admins only");
+    };
+
+    switch (listings.get(id)) {
+      case (null) { Runtime.trap("Listing not found") };
+      case (?existingListing) {
+        let updatedListing = {
+          existingListing with
+          rank;
+          priceE8s;
+          rareSkinNames;
+          rareSkinShowcaseLink;
+        };
+        listings.add(id, updatedListing);
+      };
+    };
+  };
+
   public shared ({ caller }) func deleteListing(id : Text) : async () {
     if (not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Admins only");
@@ -203,6 +245,8 @@ actor {
           priceE8s = l.priceE8s;
           specialDeal = l.specialDeal;
           status = l.status;
+          rareSkinNames = l.rareSkinNames;
+          rareSkinShowcaseLink = l.rareSkinShowcaseLink;
         };
       }
     ).sort(PublicListing.compareById);
@@ -217,6 +261,8 @@ actor {
           priceE8s = l.priceE8s;
           specialDeal = l.specialDeal;
           status = l.status;
+          rareSkinNames = l.rareSkinNames;
+          rareSkinShowcaseLink = l.rareSkinShowcaseLink;
         };
       }
     ).filter(func(l) { l.rank == rank }).sort(PublicListing.compareById);
@@ -235,6 +281,8 @@ actor {
           priceE8s = l.priceE8s;
           specialDeal = l.specialDeal;
           status = l.status;
+          rareSkinNames = l.rareSkinNames;
+          rareSkinShowcaseLink = l.rareSkinShowcaseLink;
         });
       };
     };
@@ -249,6 +297,8 @@ actor {
           priceE8s = l.priceE8s;
           specialDeal = l.specialDeal;
           status = l.status;
+          rareSkinNames = l.rareSkinNames;
+          rareSkinShowcaseLink = l.rareSkinShowcaseLink;
         };
       }
     ).filter(func(l) { l.specialDeal }).sort(PublicListing.compareById);
@@ -541,16 +591,35 @@ actor {
 
   // ─── Admin Bootstrap Functions ─────────────────────────────────────────────
 
+  // Returns whether an admin has been claimed yet (public, no auth required)
+  public query func isAdminClaimed() : async Bool {
+    isAdminSet();
+  };
+
+  // claimAdmin:
+  //   - Anonymous callers are always rejected with a trap.
+  //   - If no admin is set yet, the first authenticated caller becomes admin (#success).
+  //   - If admin is already set and the caller IS the admin, return #alreadyClaimed.
+  //   - If admin is already set and the caller is NOT the admin, trap with Access Denied.
   public shared ({ caller }) func claimAdmin() : async {
     #alreadyClaimed;
     #success;
   } {
+    // Anonymous principals can never claim admin
     if (caller.isAnonymous()) {
       Runtime.trap("Unauthorized: Must be authenticated to claim admin");
     };
+
     if (isAdminSet()) {
-      return #alreadyClaimed;
+      // If the caller is already the admin, return alreadyClaimed
+      if (isAdmin(caller)) {
+        return #alreadyClaimed;
+      };
+      // Any other authenticated caller is rejected with an error
+      Runtime.trap("Unauthorized: Admin has already been claimed by another principal");
     };
+
+    // No admin set yet — grant admin to this caller
     adminPrincipal := ?caller;
     #success;
   };
@@ -569,4 +638,3 @@ actor {
     };
   };
 };
-
