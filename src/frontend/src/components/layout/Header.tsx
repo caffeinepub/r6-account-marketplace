@@ -35,7 +35,9 @@ export default function Header({ onNavigate, currentPage }: HeaderProps) {
   const navItems = [
     { label: "Marketplace", page: "marketplace" as const },
     { label: "Reviews", page: "vouches" as const },
-    { label: "Admin", page: "admin" as const },
+    // Admin link only visible to authenticated users — the dashboard itself handles
+    // the claim/deny flow, but unauthenticated users should not see it at all
+    ...(isAuthenticated ? [{ label: "Admin", page: "admin" as const }] : []),
   ];
 
   return (

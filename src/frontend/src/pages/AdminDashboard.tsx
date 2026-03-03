@@ -43,9 +43,17 @@ export default function AdminDashboard() {
     try {
       const result = await claimAdminMutation.mutateAsync();
       if (result === Variant_success_alreadyClaimed.success) {
+        // Successfully claimed admin for the first time
         setClaimSuccess(true);
       } else if (result === Variant_success_alreadyClaimed.alreadyClaimed) {
-        setClaimError("Admin has already been claimed. Access denied.");
+        // Admin was already claimed — if isAdminClaimed was true, this user is
+        // attempting to re-verify. Grant dashboard access and let canister-level
+        // auth reject any unauthorised actions.
+        if (isAdminClaimed) {
+          setClaimSuccess(true);
+        } else {
+          setClaimError("Admin has already been claimed. Access denied.");
+        }
       }
     } catch (err: any) {
       const msg = err?.message || String(err);
@@ -147,24 +155,49 @@ export default function AdminDashboard() {
       );
     }
 
-    // Admin already claimed by someone else — access denied
+    // Admin already claimed — let the user verify they are the admin
+    // (isAdmin from useIsCallerAdmin is unreliable due to backend auth mixin disconnect;
+    //  claimAdmin() is the authoritative check: success = you are the admin)
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-6 p-8 max-w-md">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-              <Lock className="w-8 h-8 text-destructive" />
+            <div
+              className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                claimError ? "bg-destructive/10" : "bg-primary/10"
+              }`}
+            >
+              <Shield
+                className={`w-8 h-8 ${claimError ? "text-destructive" : "text-primary"}`}
+              />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Access Denied</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            Admin Verification
+          </h1>
           <p className="text-muted-foreground">
-            Admin access has already been claimed by another principal. You do
-            not have permission to access this dashboard.
+            An admin has already been set for this marketplace. If you are the
+            admin, click below to verify your identity and access the dashboard.
           </p>
           {claimError && (
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
               {claimError}
             </div>
+          )}
+          {!claimError && (
+            <button
+              type="button"
+              onClick={handleClaimAdmin}
+              disabled={claimAdminMutation.isPending}
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+            >
+              {claimAdminMutation.isPending && (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              )}
+              {claimAdminMutation.isPending
+                ? "Verifying..."
+                : "Verify Admin Access"}
+            </button>
           )}
         </div>
       </div>

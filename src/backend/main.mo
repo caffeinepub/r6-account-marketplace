@@ -7,14 +7,10 @@ import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 
-import Iter "mo:core/Iter";
 import Nat "mo:core/Nat";
-
 import OutCall "http-outcalls/outcall";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-
-// Enable migration via with-clause
 
 actor {
   type Status = {
@@ -91,7 +87,6 @@ actor {
 
   module Vouch {
     public func compareByTimestamp(entry1 : Vouch, entry2 : Vouch) : Order.Order {
-      // Sort descending by timestamp (newest first)
       if (entry1.timestamp > entry2.timestamp) { #less }
       else if (entry1.timestamp < entry2.timestamp) { #greater }
       else { #equal };
@@ -107,7 +102,6 @@ actor {
   let credentials = Map.empty<Text, Blob>();
   var decryptionKey : ?Blob = null;
   let vouches = Map.empty<Text, Vouch>();
-  // viewCounts keyed by purchaseId
   let viewCounts = Map.empty<Text, Nat>();
   let maxViews = 5;
   let accessControlState = AccessControl.initState();
@@ -235,7 +229,6 @@ actor {
     listings.remove(id);
   };
 
-  // Public queries — no auth required
   public query func listAllListings() : async [PublicListing] {
     listings.values().toArray().map<AccountListing, PublicListing>(
       func(l) {
@@ -306,7 +299,6 @@ actor {
 
   // ─── Payment Functions ────────────────────────────────────────────────────
 
-  // Internal helper: check if a given principal has a confirmed purchase for a given accountId
   func _hasPurchasedInternal(buyer : Principal, accountId : Text) : Bool {
     let found = purchases.values().toArray().find(
       func(p : PurchaseRecord) : Bool {
@@ -319,7 +311,6 @@ actor {
     };
   };
 
-  // Internal helper: check if a given principal has a confirmed purchase for a given purchaseId
   func _hasPurchaseByIdInternal(buyer : Principal, purchaseId : Text) : Bool {
     switch (purchases.get(purchaseId)) {
       case (null) { false };
@@ -329,7 +320,6 @@ actor {
     };
   };
 
-  // Caller is the buyer — do not accept buyerPrincipal from untrusted input
   public shared ({ caller }) func verifyIcpPayment(purchaseId : Text, accountId : Text, _blockIndex : Nat) : async () {
     if (caller.isAnonymous()) {
       Runtime.trap("Unauthorized: Must be authenticated to verify payment");
@@ -399,7 +389,6 @@ actor {
     };
   };
 
-  // Returns purchase records ONLY if caller principal matches buyerPrincipal (or caller is admin)
   public query ({ caller }) func getPurchaseByBuyer(buyer : Principal) : async [PurchaseRecord] {
     if (caller != buyer and not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Can only view your own purchases");
@@ -409,7 +398,6 @@ actor {
     });
   };
 
-  // Returns true only if caller has a Confirmed purchase for the given accountId
   public query ({ caller }) func hasPurchased(accountId : Text) : async Bool {
     if (caller.isAnonymous()) {
       return false;
@@ -426,7 +414,6 @@ actor {
     credentials.add(accountId, encryptedBlob);
   };
 
-  // Must be an update call (not query) to enforce access control on-chain
   public shared ({ caller }) func getCredential(accountId : Text, purchaseId : Text) : async {
     #notAuthenticated;
     #notFound;
@@ -434,13 +421,10 @@ actor {
     #viewLimitExceeded;
     #success : Blob;
   } {
-    // Validate caller is authenticated (non-anonymous)
     if (caller.isAnonymous()) {
       return #notAuthenticated;
     };
 
-    // Validate caller has a confirmed purchase for this accountId via the given purchaseId
-    // The purchaseId must belong to the caller and reference the correct accountId
     switch (purchases.get(purchaseId)) {
       case (null) { return #notPurchased };
       case (?p) {
@@ -456,7 +440,6 @@ actor {
       };
     };
 
-    // Rate-limit: max 5 views per purchaseId
     let currentCount = switch (viewCounts.get(purchaseId)) {
       case (null) { 0 };
       case (?c) { c };
@@ -466,7 +449,6 @@ actor {
       return #viewLimitExceeded;
     };
 
-    // Increment view count
     viewCounts.add(purchaseId, currentCount + 1);
 
     switch (credentials.get(accountId)) {
@@ -475,7 +457,6 @@ actor {
     };
   };
 
-  // Decryption key only retrievable by admin — never returned to buyers
   public shared ({ caller }) func getDecryptionKey() : async ?Blob {
     if (not isAdmin(caller)) {
       Runtime.trap("Unauthorized: Admins only");
@@ -499,22 +480,18 @@ actor {
     #alreadyVouched;
     #success;
   } {
-    // Validate caller is authenticated
     if (caller.isAnonymous()) {
       return #notAuthenticated;
     };
 
-    // Validate rating range
     if (rating < 1 or rating > 5) {
       return #invalidRating;
     };
 
-    // Validate caller has a confirmed purchase for the given purchaseId
     if (not _hasPurchaseByIdInternal(caller, purchaseId)) {
       return #notPurchased;
     };
 
-    // Enforce one vouch per purchaseId
     let existingVouch = vouches.values().toArray().find(func(v : Vouch) : Bool {
       v.purchaseId == purchaseId
     });
@@ -540,7 +517,6 @@ actor {
     };
   };
 
-  // Returns only public fields — NOT buyerPrincipal or purchaseId
   public query func getPublicVouches() : async [PublicVouch] {
     vouches.values().toArray()
       .filter(func(v : Vouch) : Bool { not v.hidden })
@@ -579,7 +555,6 @@ actor {
     vouches.remove(vouchId);
   };
 
-  // Returns vouches where caller principal matches buyerPrincipal
   public query ({ caller }) func getMyVouches() : async [Vouch] {
     if (caller.isAnonymous()) {
       Runtime.trap("Unauthorized: Must be authenticated to view your vouches");
@@ -591,35 +566,25 @@ actor {
 
   // ─── Admin Bootstrap Functions ─────────────────────────────────────────────
 
-  // Returns whether an admin has been claimed yet (public, no auth required)
   public query func isAdminClaimed() : async Bool {
     isAdminSet();
   };
 
-  // claimAdmin:
-  //   - Anonymous callers are always rejected with a trap.
-  //   - If no admin is set yet, the first authenticated caller becomes admin (#success).
-  //   - If admin is already set and the caller IS the admin, return #alreadyClaimed.
-  //   - If admin is already set and the caller is NOT the admin, trap with Access Denied.
   public shared ({ caller }) func claimAdmin() : async {
     #alreadyClaimed;
     #success;
   } {
-    // Anonymous principals can never claim admin
     if (caller.isAnonymous()) {
       Runtime.trap("Unauthorized: Must be authenticated to claim admin");
     };
 
     if (isAdminSet()) {
-      // If the caller is already the admin, return alreadyClaimed
       if (isAdmin(caller)) {
         return #alreadyClaimed;
       };
-      // Any other authenticated caller is rejected with an error
       Runtime.trap("Unauthorized: Admin has already been claimed by another principal");
     };
 
-    // No admin set yet — grant admin to this caller
     adminPrincipal := ?caller;
     #success;
   };

@@ -439,11 +439,12 @@ export function useClaimAdmin() {
       if (!actor) throw new Error("Actor not available");
       return actor.claimAdmin();
     },
-    onSuccess: (result) => {
-      if (result === Variant_success_alreadyClaimed.success) {
-        queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
-        queryClient.invalidateQueries({ queryKey: ["isAdminClaimed"] });
-      }
+    onSuccess: () => {
+      // Always refetch admin status after any claim attempt, regardless of result
+      queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+      queryClient.invalidateQueries({ queryKey: ["isAdminClaimed"] });
+      queryClient.refetchQueries({ queryKey: ["isCallerAdmin"] });
+      queryClient.refetchQueries({ queryKey: ["isAdminClaimed"] });
     },
   });
 }
