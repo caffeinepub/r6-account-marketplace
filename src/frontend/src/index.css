@@ -1,0 +1,178 @@
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.25rem;
+
+    /* Dark tactical theme - always dark */
+    --background: 0.18 0 0;
+    --foreground: 0.95 0 0;
+    --card: 0.22 0 0;
+    --card-foreground: 0.95 0 0;
+    --popover: 0.16 0 0;
+    --popover-foreground: 0.95 0 0;
+    --primary: 0.78 0.15 85;
+    --primary-foreground: 0.1 0 0;
+    --secondary: 0.18 0 0;
+    --secondary-foreground: 0.85 0 0;
+    --muted: 0.18 0 0;
+    --muted-foreground: 0.55 0 0;
+    --accent: 0.78 0.15 85;
+    --accent-foreground: 0.1 0 0;
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.95 0 0;
+    --border: 0.22 0 0;
+    --input: 0.22 0 0;
+    --ring: 0.78 0.15 85;
+
+    /* Custom tokens */
+    --gold: 0.78 0.15 85;
+    --gold-bright: 0.85 0.18 88;
+    --crimson: 0.55 0.22 25;
+    --surface: 0.14 0 0;
+    --surface-raised: 0.18 0 0;
+    --surface-overlay: 0.22 0 0;
+
+    --chart-1: 0.78 0.15 85;
+    --chart-2: 0.55 0.22 25;
+    --chart-3: 0.6 0.12 220;
+    --chart-4: 0.65 0.18 160;
+    --chart-5: 0.7 0.14 300;
+
+    --sidebar: 0.12 0 0;
+    --sidebar-foreground: 0.95 0 0;
+    --sidebar-primary: 0.78 0.15 85;
+    --sidebar-primary-foreground: 0.1 0 0;
+    --sidebar-accent: 0.18 0 0;
+    --sidebar-accent-foreground: 0.85 0 0;
+    --sidebar-border: 0.22 0 0;
+    --sidebar-ring: 0.78 0.15 85;
+  }
+
+  /* Force dark mode always */
+  html {
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", sans-serif;
+    background-color: oklch(0.18 0 0);
+    color: oklch(0.95 0 0);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Rajdhani", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+}
+
+@layer utilities {
+  .text-gold {
+    color: oklch(0.78 0.15 85);
+  }
+  .text-gold-bright {
+    color: oklch(0.85 0.18 88);
+  }
+  .text-crimson {
+    color: oklch(0.65 0.22 25);
+  }
+  .bg-gold {
+    background-color: oklch(0.78 0.15 85);
+  }
+  .bg-surface {
+    background-color: oklch(0.14 0 0);
+  }
+  .bg-surface-raised {
+    background-color: oklch(0.18 0 0);
+  }
+  .bg-surface-overlay {
+    background-color: oklch(0.22 0 0);
+  }
+  .border-gold {
+    border-color: oklch(0.78 0.15 85);
+  }
+  .border-gold\/30 {
+    border-color: oklch(0.78 0.15 85 / 0.3);
+  }
+  .border-crimson {
+    border-color: oklch(0.65 0.22 25);
+  }
+  .glow-gold {
+    box-shadow: 0 0 20px oklch(0.78 0.15 85 / 0.3);
+  }
+  .glow-crimson {
+    box-shadow: 0 0 20px oklch(0.65 0.22 25 / 0.3);
+  }
+  .tactical-border {
+    border: 1px solid oklch(0.78 0.15 85 / 0.25);
+  }
+  .clip-tactical {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 12px) 0,
+      100% 12px,
+      100% 100%,
+      12px 100%,
+      0 calc(100% - 12px)
+    );
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.12 0 0);
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.3 0 0);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.78 0.15 85 / 0.6);
+}
+
+/* Animations */
+@keyframes pulse-gold {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+.animate-pulse-gold {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
